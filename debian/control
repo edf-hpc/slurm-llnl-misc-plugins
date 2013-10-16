@@ -1,0 +1,34 @@
+Source: slurm-llnl-edf-plugins
+Priority: optional
+Maintainer: Mehdi Dogguy <mehdi@debian.org>
+Build-Depends:
+ debhelper (>= 8)
+Standards-Version: 3.9.3
+Section: doc
+
+Package: slurm-llnl-generic-scripts-plugin
+Architecture: all
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends}
+Recommends:
+ slurm-llnl
+Description: Generic Prolog and Epilog scripts for Slurm
+ The job scheduler Slurm can execute so called Prolog and Epilog scripts
+ at different stages of each job. For each stage, one script has to appear
+ in Slurm's configuration file.
+ .
+ This package provides a generic script that can be linked to in order to
+ behave as a (Pro|Epi)log script using an associated (Pro|Epi)log.d directory
+ next to it. The latter should contain executable scripts that will be run
+ for the specified stage.
+
+Package: slurm-llnl-job-submit-plugin
+Architecture: all
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+ slurm-llnl-basic-plugins
+Description: Lua plugin for routing jobs in approriate defined QOSes
+ This package provides a lua script for routing jobs in appropriate QOSes
+ depending on the compute resources asked by the job.

@@ -1,4 +1,4 @@
-Source: slurm-llnl-edf-plugins
+Source: slurm-llnl-misc-plugins
 Priority: optional
 Maintainer: Mehdi Dogguy <mehdi@debian.org>
 Build-Depends:

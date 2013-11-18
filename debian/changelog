@@ -1,4 +1,4 @@
-slurm-llnl-misc-plugins (0.1-1.1) squeeze; urgency=low
+slurm-llnl-misc-plugins (0.2) squeeze; urgency=low
 
   * Update check_node_health.sh script
 

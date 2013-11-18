@@ -1,4 +1,10 @@
-slurm-llnl-misc-plugins (0.1-1) UNRELEASED; urgency=low
+slurm-llnl-misc-plugins (0.1-1.1) squeeze; urgency=low
+
+  * Update check_node_health.sh script
+
+ -- Antonio J. Russo <antonio@truelite.it>  Mon, 18 Nov 2013 16:39:21 +0100
+
+slurm-llnl-misc-plugins (0.1-1) squeeze; urgency=low
 
   * Initial Release
 

@@ -1,17 +1,28 @@
-#!/bin/bash 
-ETHMASTER=atbatch1
-ETHBACKUP=atbatch2
-IBMASTER=ibatgpfs001
-IBBACKUP=ibatgpfs007
-MOUNTS="/home /scratch /tmp"
-PMGROUP="cl-athos-users"
-NRPKGS=951
-KERNELVER="3.2.0-0.bpo.4-amd64"
-FSLIMIT=85
-IBLIMIT=56
+#!/bin/bash
+#####################################################################
+# This script will be executed on each compute node to verify 
+# that the node is working properly. 
+#####################################################################
+# Copyright (C) 2013 EDF SA                                           
+# Contact:                                                            
+#       CCN - HPC <dsp-cspit-ccn-hpc@edf.fr>                          
+#       1, Avenue du General de Gaulle                                
+#       92140 Clamart                                                 
+#                                                                     
+#Authors: Antonio J. Russo <antonio-externe.russo@edf.fr>             
+#This program is free software; you can redistribute in and/or        
+#modify it under the terms of the GNU General Public License,         
+#version 2, as published by the Free Software Foundation.             
+#This program is distributed in the hope that it will be useful,      
+#but WITHOUT ANY WARRANTY; without even the implied warranty of       
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the        
+#GNU General Public License for more details.                         
+#On Calibre systems, the complete text of the GNU General             
+#Public License can be found in `/usr/share/common-licenses/GPL'.     
+##################################################################### 
 
-
-
+PATH="/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
+DEFCFG=/etc/default/checknodehealth
 STATUS=0
 REASONS=""
 NETWK=0
@@ -154,8 +165,21 @@ check_node ()
 	fi
 }
 
+drain_node ()
+{
+	if [[ ${STATUS} -eq 1 ]]
+	then
+		scontrol update NodeName=$(hostname -s) State=DRAIN Reason="${REASONS}"
+	fi
 
+}
 
+if [ -f ${DEFCFG} ]
+then
+	source ${DEFCFG}
+else
+	exit 1	
+fi
 
 case ${1} in
 	--no-slurm)
@@ -167,13 +191,9 @@ case ${1} in
 		if slurm_state
 		then
 			check_node
-			if [[ ${STATUS} -eq 1 ]]
-			then
-				scontrol update NodeName=$(hostname -s) State=DRAIN Reason="${REASONS}"
-			fi
+			drain_node
 		fi
 	;;
 esac
-
 
 exit ${STATUS} 

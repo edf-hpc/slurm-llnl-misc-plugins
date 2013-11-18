@@ -1,1 +1,2 @@
 check_node_health.sh		usr/lib/slurm
+checknodehealth			etc/default

@@ -1,3 +1,10 @@
+slurm-llnl-misc-plugins (0.2.2) squeeze; urgency=low
+
+  * Fix generic-script.sh to check for regular files as well as
+    symlinks.
+
+ -- Mehdi Dogguy <mehdi@debian.org>  Tue, 19 Nov 2013 17:12:59 +0100
+
 slurm-llnl-misc-plugins (0.2.1) squeeze; urgency=low
 
   * Ldap check bug fix

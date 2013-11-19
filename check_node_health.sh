@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash 
 #####################################################################
 # This script will be executed on each compute node to verify 
 # that the node is working properly. 
@@ -80,9 +80,14 @@ mount_points ()
 
 auth_ldap ()
 {
-	PMUSERS=( $(members ${PMGROUP}) ) 
-	IRD=$(shuf -i 0-${#PMUSERS[@]}  -n 1)
-	RDUSER=${PMUSERS[${IRD}]}
+	PMUSERS=( $(members ${PMGROUP} 2> /dev/null) ) 
+	if [ ${#PMUSERS[@]} -gt 0 ]
+	then
+		IRD=$(shuf -i 0-${#PMUSERS[@]}  -n 1)
+		RDUSER=${PMUSERS[${IRD}]}
+	else
+		RDUSER='userdoesnotexist'
+	fi
 	id ${RDUSER} &> /dev/null 
 	if [ ${?} -ne 0 ]
 	then

@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.2.3) squeeze; urgency=low
+
+  * Yet anoter typo fix in generic-script.sh.
+
+ -- Mehdi Dogguy <mehdi@debian.org>  Tue, 17 Dec 2013 11:05:55 +0100
+
 slurm-llnl-misc-plugins (0.2.2) squeeze; urgency=low
 
   * Fix generic-script.sh to check for regular files as well as

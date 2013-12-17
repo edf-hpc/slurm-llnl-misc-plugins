@@ -30,7 +30,7 @@ if hasElement "${NAME}" "${SCRIPTS[@]}"; then
   DIRNAME="${PATHD}/${NAME}.d"
   info "Directory for ${NAME} scripts in ${DIRNAME}"
   if [ -d "${DIRNAME}" ]; then
-    for script in `find ${DIRNAME} -type f -or type l -executable -print 2>/dev/null | sort`; do
+    for script in `find ${DIRNAME} \( -type f -or -type l \) -executable -print 2>/dev/null | sort`; do
       info "Executing $script..."
       $script
       if [ "$?" -ne "0" ]; then

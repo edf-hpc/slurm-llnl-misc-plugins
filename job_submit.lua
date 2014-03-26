@@ -46,7 +46,7 @@ Public License can be found in `/usr/share/common-licenses/GPL'.
 QOS_SEP = "|"		-- separator for sacctmgr command ouput
 QOS_NAME_SEP = "_"	-- separator for QOS name
 NULL = 4294967294	-- numeric nil
-CORE_PER_CPU=16
+CORE_PER_CPU=24
 
 --########################################################################--
 --
@@ -219,10 +219,17 @@ function build_qos_list ()
 	local qos_duration
 	local qos_maxcpus
 	local qos_partition
+	local qos_conf = "/etc/slurm-llnl/qos.conf"
+	local qos_file
 
-	-- Read informations from sacctmgr command
-	-- qos_rec = assert (io.popen ("sacctmgr --noheader --parsable show qos format=\"Name,MaxWall,MaxCPUs\" | sort -t'|' -k 3 -n"))
-	qos_rec = assert (io.popen ("sacctmgr --noheader --parsable show qos format=\"Name,MaxWall,MaxCPUs\" | sort -t'|' -k 3  -k 2 -k 1r -n"))
+	qos_file = io.open (qos_conf, "r")
+	if qos_file == nil then
+		-- Read informations from sacctmgr command
+		qos_rec = assert (io.popen ("sacctmgr --noheader --parsable show qos format=\"Name,MaxWall,MaxCPUs\" | sort -t'_' -d -k 2 -k 1"))
+        else
+                -- Read qos_conf file
+		qos_rec = assert (io.popen ("cat /etc/slurm-llnl/qos.conf"))
+	end
 
 	for line in qos_rec:lines() do
 		local t = {}
@@ -278,12 +285,13 @@ function slurm_job_submit ( job_desc, part_list )
 	local qos_list = build_qos_list()
 	local maxtime
 	local maxcpus
-        local cmd =  "getent passwd | awk -F':' '($3==" .. job_desc.user_id .. "){print tolower($1)}'"
+        local cmd =  "getent passwd " .. job_desc.user_id .. "| awk -F':' '{print tolower($1)}'"
 
         username = os.capture(cmd) -- convert uid to logname
 
 	-- QOS set by user
 	if job_desc.qos ~= nil  then
+
 		local t = split(job_desc.qos, QOS_NAME_SEP)
 
 		partition = t[1]
@@ -294,12 +302,6 @@ function slurm_job_submit ( job_desc, part_list )
 			job_desc.partition = partition
 		end
 	else
-
-		-- Partition not set by user, set to default partition
-		-- if job_desc.partition == nil then
-		--	job_desc.partition =  default_partition (part_rec)
-		-- end
-
 		-- Time limit not set by user, set to partition default time limit
 		if job_desc.time_limit == NULL then -- no time limit
 			job_desc.time_limit = 60 -- 1 heure
@@ -332,7 +334,7 @@ function slurm_job_submit ( job_desc, part_list )
 										end
 									end
 
-									if maxtime ~= "" then -- limit not yet found out
+									if maxtime ~= 0 then -- limit not yet found out
 										-- Will give the best QOS
 										job_desc.qos = qos_list[u][maxcpus][maxtime]
 										job_desc.partition = u
@@ -352,15 +354,15 @@ function slurm_job_submit ( job_desc, part_list )
 			for i in ipairs(part_rec) do
 				if i == 1 then
 					job_desc.partition = part_rec[i].name
+					job_desc.qos = "normal"
 					break
 				end
 			end
 		end
-
-       		log_info("slurm_job_modify: job from user:%s/%u minutes:%u cpus/nodes:%u partition:%s QOS:%s", username, job_desc.user_id, job_desc.time_limit, job_desc.min_cpus, showstring(job_desc.partition), showstring(job_desc.qos))
-
 	end
-	
+
+	log_info("slurm_job_modify: job from user:%s/%u minutes:%u cpus/nodes:%u partition:%s QOS:%s", username, job_desc.user_id, job_desc.time_limit, job_desc.min_cpus, showstring(job_desc.partition), showstring(job_desc.qos))
+
         return 0
 end
 
@@ -409,5 +411,3 @@ part_rec_meta = {
 log_info("initialized")
 
 return slurm.SUCCESS
-
-

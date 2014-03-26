@@ -1,8 +1,9 @@
 slurm-llnl-misc-plugins (0.2.4) UNRELEASED; urgency=low
 
   * Fix detection of fs usage in check_node_health.sh
+  * Update job_submit.lua
 
- -- Mehdi Dogguy <mehdi@debian.org>  Wed, 26 Mar 2014 12:04:33 +0100
+ -- Mehdi Dogguy <mehdi@debian.org>  Wed, 26 Mar 2014 12:09:37 +0100
 
 slurm-llnl-misc-plugins (0.2.3) squeeze; urgency=low
 

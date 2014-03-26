@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.2.4) UNRELEASED; urgency=low
+
+  * Fix detection of fs usage in check_node_health.sh
+
+ -- Mehdi Dogguy <mehdi@debian.org>  Wed, 26 Mar 2014 12:04:33 +0100
+
 slurm-llnl-misc-plugins (0.2.3) squeeze; urgency=low
 
   * Yet anoter typo fix in generic-script.sh.

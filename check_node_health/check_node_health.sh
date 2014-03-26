@@ -67,8 +67,8 @@ mount_points ()
                 	MSG="${volume} umounted"
                 	REASONS="${REASONS:+$REASONS, }${MSG}"
 		else
-			USAGE=$(df -h | grep ${volume} | cut -c 41-42)
-			if [ ${USAGE} -gt ${FSLIMIT} ]
+			USAGE=$(df -P | awk 'NR==1 {next} /\${volume}$/ { print $5 }')
+			if [ ${USAGE} > ${FSLIMIT} ]
 			then
 				STATUS=1
                         	MSG="${volume} usage ${USAGE}%"

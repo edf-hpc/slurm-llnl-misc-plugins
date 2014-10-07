@@ -1,3 +1,10 @@
+slurm-llnl-misc-plugins (0.3.0) UNRELEASED; urgency=low
+
+  * Add a python script to setup mysql for SlurmDBD
+    in a new package slurm-llnl-setup-mysql.
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Mon, 6 Oct 2014 15:49:11 +0100
+
 slurm-llnl-misc-plugins (0.2.4) UNRELEASED; urgency=low
 
   * Fix detection of fs usage in check_node_health.sh

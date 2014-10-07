@@ -1,0 +1,273 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+##############################################################################
+#  Copyright (C) 2014 EDF SA                                                 #
+#                                                                            #
+#  Author: Rémi Palancher <remi-externe.palancher@edf.fr>                    #
+#                                                                            #
+#  This file is part of slurm-llnl-misc-plugins.                             #
+#                                                                            #
+#  This software is governed by the CeCILL-C license under French law and    #
+#  abiding by the rules of distribution of free software. You can use,       #
+#  modify and/ or redistribute the software under the terms of the CeCILL-C  #
+#  license as circulated by CEA, CNRS and INRIA at the following URL         #
+#  "http://www.cecill.info".                                                 #
+#                                                                            #
+#  As a counterpart to the access to the source code and rights to copy,     #
+#  modify and redistribute granted by the license, users are provided only   #
+#  with a limited warranty and the software's author, the holder of the      #
+#  economic rights, and the successive licensors have only limited           #
+#  liability.                                                                #
+#                                                                            #
+#  In this respect, the user's attention is drawn to the risks associated    #
+#  with loading, using, modifying and/or developing or reproducing the       #
+#  software by the user in light of its specific status of free software,    #
+#  that may mean that it is complicated to manipulate, and that also         #
+#  therefore means that it is reserved for developers and experienced        #
+#  professionals having in-depth computer knowledge. Users are therefore     #
+#  encouraged to load and test the software's suitability as regards their   #
+#  requirements in conditions enabling the security of their systems and/or  #
+#  data to be ensured and, more generally, to use and operate it in the      #
+#  same conditions as regards security.                                      #
+#                                                                            #
+#  The fact that you are presently reading this means that you have had      #
+#  knowledge of the CeCILL-C license and that you accept its terms.          #
+#                                                                            #
+##############################################################################
+
+import sys
+import os
+import argparse
+import MySQLdb
+import ConfigParser
+from sets import Set
+
+# hardcoded conf
+DATABASES = ['slurm', 'slurm_acct_db']
+
+class Conf(object):
+    """Runtime configuration class"""
+
+    def __init__(self, filename='/etc/slurm-llnl/slurm-mysql.conf'):
+        self.filename = filename
+        self.db_user = None
+        self.db_password = None
+        self.db_hosts = []
+        self.passwords = {}
+        self.controllers = []
+        self.admins = []
+        self.parser = None
+
+    def parse(self):
+        """Parse the configuration file"""
+        if not os.path.isfile(self.filename):
+            print("E: failed to parse config file {filename}" \
+                      .format(filename=self.filename))
+            sys.exit(1)
+        self.parser = ConfigParser.ConfigParser()
+        self.parser.read(self.filename)
+
+        # db
+        self.db_user = self.parser.get('db', 'user')
+        self.db_password = self.parser.get('db', 'password')
+        self.db_hosts = self.parser.get('db','hosts').split(',')
+
+        # passwords
+        users = self.parser.options('passwords')
+        for user in users:
+            self.passwords[user] = self.parser.get('passwords', user)
+
+        # hosts
+        self.controllers = self.parser.get('hosts', 'controllers').split(',')
+        self.admins = self.parser.get('hosts', 'admins').split(',')
+
+class Grant(object):
+    """Grant class"""
+
+    def __init__(self,priv,db,tables,user,host,
+                 password=None,with_grant=True):
+        self.priv=priv
+        self.db=db
+        self.tables=tables
+        self.user=user
+        self.host=host
+        self.password=password
+        self.with_grant=with_grant
+
+    def str(self, hide=False):
+        str_priv = self.priv.upper()
+        str_db = "%s" % (self.db)
+        str_tables = "%s" % (self.tables)
+        str_user = "'%s'" % (self.user)
+        str_host = "'%s'" % (self.host)
+
+        result = "GRANT {priv} ON {db}.{tables} TO {user}@{host}" \
+                     .format(priv=str_priv,
+                             db=str_db,
+                             tables=str_tables,
+                             user=str_user,
+                             host=str_host)
+        if self.password:
+            if hide:
+                str_password = "******"
+            else:
+                str_password = "'%s'" % (self.password)
+            result += " IDENTIFIED BY {password}".format(password=str_password)
+        if self.with_grant:
+            result += " WITH GRANT OPTION"
+        return result
+
+    def sql(self):
+        return self.str()
+
+    def __str__(self):
+        return self.str(hide=True)
+
+def parse_args():
+    """Parses cmd line arguments"""
+    parser = argparse.ArgumentParser(description='Setup MySQL for SlurmDBD')
+    parser.add_argument("action",
+                        nargs=1,
+                        choices=['check', 'create'],
+                        help="Name of the action to perform")
+
+    args = parser.parse_args()
+    action = args.action[0]
+    return action
+
+def missing_databases(db_cur):
+    """Compare the list of all needed databases with all existing databases.
+       If all databases exist, returns None. Else returns the list of missing
+       databases."""
+    db_cur.execute("SHOW databases")
+    db_res = db_cur.fetchall()
+    existing_db = [ res[0] for res in db_res ]
+    print ("D: existing db: %s" % (str(existing_db)))
+    missing_db = [ db for db in DATABASES if db not in existing_db ]
+    if not len(missing_db): return None
+    return missing_db
+
+def create_database(db_cur, db):
+    """Creates db given in parameter."""
+    print("I: creating database {db}".format(db=db))
+    db_cur.execute("CREATE DATABASE {db}".format(db=db))
+
+def missing_grants(conf, db_cur):
+    """First creates the list of all needed grants. Then compares to the
+       existing grants. If all grants already exist, returns None. Else
+       returns the list of all missing grants."""
+
+    # build list of all needed grants
+    grants = []
+    all_hosts = Set(conf.db_hosts + conf.controllers + conf.admins + ['localhost'])
+    for db in DATABASES:
+        for host in all_hosts:
+            grants.append(Grant('all', db, '*', 'slurm', host,
+                          conf.passwords['slurm']))
+
+    grants.append(Grant('select', 'slurm_acct_db', '*', 'slurmro', '%', conf.passwords['slurmro']))
+
+    # then check against existing grants
+    missing_grants = []
+    for grant in grants:
+        # DISCLAIMER:
+        # The request only checks if there is an existing grant with mathing
+        # user/host/db. It does not check all the grants in details (insert,
+        # select, and so on).
+        req_check = "SELECT * FROM db WHERE Host='{host}' and Db='{db}' and User='{user}'" \
+                        .format(host=grant.host,
+                                db=grant.db,
+                                user=grant.user)
+        nb_found = db_cur.execute(req_check)
+        if nb_found:
+            print ("D: grant found: %s" % (str(grant)))
+        else:
+            missing_grants.append(grant)
+    if not len(missing_grants): return None
+    return missing_grants
+
+def add_grant(db_cur, grant):
+    """Adds grant in MySQL."""
+    print("I: adding grant {grant}".format(grant=str(grant)))
+    db_cur.execute(grant.sql())
+
+def flush_privileges(db_cur):
+    """Flush privileges. This is needed after adding grants"""
+    print("I: flushing privileges")
+    db_cur.execute("FLUSH PRIVILEGES")
+
+def close_con(db_con):
+    """Closes MySQL connection in parameter if open"""
+    if db_con:
+        print ("D: closing db connection")
+        db_con.close()
+
+def main():
+    """Script main function"""
+    # args
+    action = parse_args()
+
+    # conf
+    conf = Conf()
+    conf.parse()
+
+    all_hosts_failed = True
+    has_missing_db = False
+    has_missing_gt = False
+    needs_flush = False
+
+    for host in conf.db_hosts:
+
+        db_con = None
+        try:
+            db_con = MySQLdb.connect(host=host,
+                                     user=conf.db_user,
+                                     passwd=conf.db_password,
+                                     db='mysql')
+
+            db_cur = db_con.cursor()
+
+            missing_db = missing_databases(db_cur)
+            if missing_db:
+                has_missing_db = True
+                for db in missing_db:
+                    print("W: db %s is missing" % (db))
+                    if action == 'create':
+                        create_database(db_cur, db)
+
+
+            missing_gt = missing_grants(conf, db_cur)
+            if missing_gt:
+                has_missing_gt = True
+                for grant in missing_gt:
+                    print("W: grant is missing: %s" % (str(grant)))
+                    if action == 'create':
+                        add_grant(db_cur, grant)
+                        needs_flush = True
+
+            if needs_flush:
+                flush_privileges(db_cur)
+
+            print("D: success with host %s" % (host))
+            all_hosts_failed = False
+            break
+
+        except MySQLdb.Error, e:
+            print("E: mysql error %d: %s" % (e.args[0],e.args[1]))
+            pass
+
+        finally:
+            close_con(db_con)
+
+    if all_hosts_failed:
+        print("E: all hosts failed")
+        sys.exit(1)
+
+    if action == 'check':
+        if has_missing_db or has_missing_gt:
+            sys.exit(1)
+        else:
+            print('I: check result: OK')
+
+if __name__ == '__main__':
+    main()

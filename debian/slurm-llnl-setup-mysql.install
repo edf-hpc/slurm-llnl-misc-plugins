@@ -1,0 +1,2 @@
+mysql-setup/slurm-mysql-setup usr/sbin
+mysql-setup/slurm-mysql.conf etc/slurm-llnl

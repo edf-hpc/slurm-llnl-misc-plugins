@@ -3,7 +3,7 @@ Priority: optional
 Maintainer: Mehdi Dogguy <mehdi@debian.org>
 Build-Depends:
  debhelper (>= 8)
-Standards-Version: 3.9.3
+Standards-Version: 3.9.5
 Section: doc
 
 Package: slurm-llnl-generic-scripts-plugin

@@ -2,6 +2,8 @@ slurm-llnl-misc-plugins (0.3.0) UNRELEASED; urgency=low
 
   * Add a python script to setup mysql for SlurmDBD
     in a new package slurm-llnl-setup-mysql.
+  * Updated dep from slurm-llnl-basic-plugins to
+    slurm-wlm-basic-plugins since pkg name has changed
 
  -- Rémi Palancher <remi-externe.palancher@edf.fr>  Mon, 6 Oct 2014 15:49:11 +0100
 

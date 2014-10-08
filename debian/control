@@ -51,6 +51,8 @@ Depends:
  ${misc:Depends},
  python,
  python-mysqldb
-Description: Mysql setup script for SlurmDBD
+Description: MySQL setup script for SlurmDBD
  This package provides a Python script which setup MySQL server, creates the
- databases and gives all needed grants to the slurm user of SlurmDBD.
+ databases and gives all needed grants to the slurm user of SlurmDBD. It is
+ designed to be idempotent by doing only what is needed. This makes it
+ eventually usable within Puppet manifests for instance.

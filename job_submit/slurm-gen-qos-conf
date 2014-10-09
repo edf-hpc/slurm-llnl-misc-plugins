@@ -1,0 +1,91 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+##############################################################################
+#  Copyright (C) 2014 EDF SA                                                 #
+#                                                                            #
+#  Author: Rémi Palancher <remi-externe.palancher@edf.fr>                    #
+#                                                                            #
+#  This file is part of slurm-llnl-misc-plugins.                             #
+#                                                                            #
+#  This software is governed by the CeCILL-C license under French law and    #
+#  abiding by the rules of distribution of free software. You can use,       #
+#  modify and/ or redistribute the software under the terms of the CeCILL-C  #
+#  license as circulated by CEA, CNRS and INRIA at the following URL         #
+#  "http://www.cecill.info".                                                 #
+#                                                                            #
+#  As a counterpart to the access to the source code and rights to copy,     #
+#  modify and redistribute granted by the license, users are provided only   #
+#  with a limited warranty and the software's author, the holder of the      #
+#  economic rights, and the successive licensors have only limited           #
+#  liability.                                                                #
+#                                                                            #
+#  In this respect, the user's attention is drawn to the risks associated    #
+#  with loading, using, modifying and/or developing or reproducing the       #
+#  software by the user in light of its specific status of free software,    #
+#  that may mean that it is complicated to manipulate, and that also         #
+#  therefore means that it is reserved for developers and experienced        #
+#  professionals having in-depth computer knowledge. Users are therefore     #
+#  encouraged to load and test the software's suitability as regards their   #
+#  requirements in conditions enabling the security of their systems and/or  #
+#  data to be ensured and, more generally, to use and operate it in the      #
+#  same conditions as regards security.                                      #
+#                                                                            #
+#  The fact that you are presently reading this means that you have had      #
+#  knowledge of the CeCILL-C license and that you accept its terms.          #
+#                                                                            #
+##############################################################################
+
+""" This script generates /etc/slurm-llnl/qos.conf configuration file used
+    by Lua job submit plugin. The content of the file is based on the QOS
+    in place in SlurmDBD database and the output of sacctmgr command. """
+
+import subprocess
+import sys
+import csv
+
+QOS_CONF = "/etc/slurm-llnl/qos.conf"
+
+# run sacctmgr to get the list of qos
+cmd = [ 'sacctmgr', 'show', 'qos', '--parsable2', '--noheader' ]
+output = None
+try:
+    output = subprocess.check_output(cmd)
+except subprocess.CalledProcessError, e:
+    print("error while executing sacctmgr: %s" % (str(e)))
+    sys.exit(1)
+
+output_lines = output.split('\n')
+output_lines.pop() # remove last empty line
+
+qos_reader = csv.reader(output_lines, delimiter='|')
+
+# list of all lines to write in conf file
+qos_conf = []
+
+for qos_row in qos_reader:
+
+    qos_conf_l = None
+    # columns of interest for qos.conf:
+    #   0 : Name
+    #   19: MaxWall
+    #   16: MaxCPUs
+    if len(qos_row) < 20:
+        print('not enough columns in row: %d' % (len(qos_conf)))
+    else:
+        if qos_row[0] != '' and qos_row[16] != '' and qos_row[19] != '':
+            qos_conf_l = "{name}|{wall}|{cpu}|\n" \
+                               .format(name=qos_row[0],
+                                       wall=qos_row[19],
+                                       cpu=qos_row[16])
+        else:
+            print('skipping qos %s since missing MaxWall and/or MaxCPUs' \
+                  % (qos_row[0]))
+
+    if qos_conf_l: qos_conf.append(qos_conf_l)
+
+if len(qos_conf):
+    with open(QOS_CONF, 'w') as qosfile:
+        qosfile.writelines(sorted(qos_conf, reverse=True))
+else:
+    # no valid qos line found in output of sacctmgr cmd
+    print("qos conf is empty, did not write %s" % (QOS_CONF))

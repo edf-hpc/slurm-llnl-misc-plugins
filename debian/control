@@ -28,7 +28,8 @@ Architecture: all
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
- slurm-wlm-basic-plugins
+ slurm-wlm-basic-plugins,
+ python
 Description: Lua plugin for routing jobs in approriate defined QOSes
  This package provides a lua script for routing jobs in appropriate QOSes
  depending on the compute resources asked by the job.

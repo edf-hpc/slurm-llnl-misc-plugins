@@ -10,6 +10,7 @@ slurm-llnl-misc-plugins (0.3.0) UNRELEASED; urgency=low
   * Add missing dependency to members and infiniband-diags on
     slurm-llnl-node-health-plugin pkg.
   * Check return code of ibstat in check_node_health script
+  * Restrict IB rate check to port 1 only
 
  -- Rémi Palancher <remi-externe.palancher@edf.fr>  Mon, 6 Oct 2014 15:49:11 +0100
 

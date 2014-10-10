@@ -130,7 +130,11 @@ network_up ()
 	else
 		if [ ${1} == "Infiniband" ]
 		then
-			RATE=$(ibstat | grep 'Rate' | cut -c 9-10 ; exit ${PIPESTATUS[0]})
+			# Get the rate of port 1 using ibstat.
+			# DISCLAIMER: Only the rate of port 1 is checked here.
+			# If you want to check the rate of another port, you
+			# have to modify the command below.
+			RATE=$(ibstat | grep 'Rate' | head -1 | cut -c 9-10 ; exit ${PIPESTATUS[0]})
 			if [ ${?} -ne 0 ]
 			then
 				STATUS=1

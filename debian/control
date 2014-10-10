@@ -40,7 +40,8 @@ Depends:
  ${shlibs:Depends},
  ${misc:Depends},
  slurm-wlm-basic-plugins,
- members
+ members,
+ infiniband-diags
 Description: Node health script for compute node
  This package provides a shell script which checks some critical aspects
  of compute node system configuration and take them out of the production

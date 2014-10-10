@@ -130,11 +130,19 @@ network_up ()
 	else
 		if [ ${1} == "Infiniband" ]
 		then
-			if [ $(ibstat | grep 'Rate' | cut -c 9-10) -ne ${IBLIMIT} ]
-        		then
-                		STATUS=1
-                		MSG="${1} rate is is less than ${IBLIMIT}"
-                		REASONS="${REASONS:+$REASONS, }${MSG}"
+			RATE=$(ibstat | grep 'Rate' | cut -c 9-10 ; exit ${PIPESTATUS[0]})
+			if [ ${?} -ne 0 ]
+			then
+				STATUS=1
+				MSG="Unable to run ibstat to get current IB rate"
+				REASONS="${REASONS:+$REASONS, }${MSG}"
+			else
+				if [ ${RATE} -ne ${IBLIMIT} ]
+				then
+					STATUS=1
+					MSG="${1} rate is is less than ${IBLIMIT}"
+					REASONS="${REASONS:+$REASONS, }${MSG}"
+				fi
 			fi
 		fi
         fi

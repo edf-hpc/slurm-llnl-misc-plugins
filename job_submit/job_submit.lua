@@ -65,7 +65,7 @@ function showstring(key)
 		return key
 	end
 end
- 
+
 --========================================================================--
 
 function addToSet(set, key)
@@ -111,50 +111,6 @@ function os.capture(cmd)
 	s = string.gsub(s, '%s+$', '')
 	s = string.gsub(s, '[\n\r]+', ' ')
 	return s
-end
-
---========================================================================--
-
-function _build_part_table(part_list)
-	-- Create a partition table from SLURM structure
-	local part_rec = {}
-
-	for i in ipairs(part_list) do
-		part_rec[i] = { part_rec_ptr=part_list[i] }
-		setmetatable (part_rec[i], part_rec_meta)
-	end
-	return part_rec
-end
-
---========================================================================--
-
-function default_partition(part_rec)
-	-- Return the name of the default partition
-	-- part_rec	: list of partitions
-	local i = 1
-
-	while part_rec[i] do
-		if part_rec[i].flag_default == 1 then
-			return part_rec[i].name
-		end
-		i = i + 1
-	end
-end
-
---========================================================================--
-
-function default_time(part_rec, partition)
-	-- Return the default duration for the partition
-	-- part_rec : list of partitions
-	-- partition : name of the partition
-	local i = 1
-
-	while part_rec[i] do
-		if part_rec[i].name == partition then
-			return part_rec[i].default_time
-		end
-		i = i + 1
-	end
 end
 
 --========================================================================--
@@ -278,36 +234,30 @@ end
 --
 --########################################################################--
 
-function slurm_job_submit ( job_desc, part_list )
-	setmetatable (job_desc, job_req_meta)
-	local part_rec = _build_part_table (part_list)
+function slurm_job_submit ( job_desc, part_list, submit_uid )
 	local username
 	local qos_list = build_qos_list()
 	local maxtime
 	local maxcpus
-        local cmd =  "getent passwd " .. job_desc.user_id .. "| awk -F':' '{print tolower($1)}'"
+	local cmd =  "getent passwd " .. submit_uid .. "| awk -F':' '{print tolower($1)}'"
 
-        username = os.capture(cmd) -- convert uid to logname
+	username = os.capture(cmd) -- convert uid to logname
 
 	-- QOS set by user
-	if job_desc.qos ~= nil  then
+	if job_desc.qos ~= nil then
 
 		local t = split(job_desc.qos, QOS_NAME_SEP)
 
 		partition = t[1]
-		size = t[2]
-		duration = t[3]
 
 		if job_desc.partition == nil then
 			job_desc.partition = partition
 		end
 	else
-		-- Time limit not set by user, set to partition default time limit
 		if job_desc.time_limit == NULL then -- no time limit
 			job_desc.time_limit = 60 -- 1 heure
 		end
 
-		-- CPU limit not set by user, set to default CPU limit
 		if job_desc.min_cpus == nil then -- no cpu limit
 			job_desc.min_cpus = 1
 		end
@@ -348,66 +298,21 @@ function slurm_job_submit ( job_desc, part_list )
 			end
 		end
 
-		--      If no default partition, set the partition to the highest
-		--      priority partition this user has access to
-	        if job_desc.partition == nil then
-			for i in ipairs(part_rec) do
-				if i == 1 then
-					job_desc.partition = part_rec[i].name
-					job_desc.qos = "normal"
-					break
-				end
-			end
-		end
 	end
 
-	log_info("slurm_job_modify: job from user:%s/%u minutes:%u cpus/nodes:%u partition:%s QOS:%s", username, job_desc.user_id, job_desc.time_limit, job_desc.min_cpus, showstring(job_desc.partition), showstring(job_desc.qos))
+	slurm.log_info("slurm_job_submit: job from user:%s/%u minutes:%u cpus/nodes:%u partition:%s QOS:%s", username, submit_uid, job_desc.time_limit, job_desc.min_cpus, showstring(job_desc.partition), showstring(job_desc.qos))
 
-        return 0
+	return slurm.SUCCESS
 end
 
 --========================================================================--
 
-function slurm_job_modify ( job_desc, job_rec, part_list )
-	setmetatable (job_desc, job_req_meta)
-	setmetatable (job_rec,  job_rec_meta)
-	local part_rec = _build_part_table (part_list)
+function slurm_job_modify ( job_desc, job_rec, part_list, modify_uid )
 
-	return 0
+	return slurm.SUCCESS
+
 end
 
---########################################################################--
---
---  Initialization code:
---
---  Define functions for logging and accessing slurmctld structures
---
---########################################################################--
-
-log_info = slurm.log_info
-log_verbose = slurm.log_verbose
-log_debug = slurm.log_debug
-log_err = slurm.error
-
-job_rec_meta = {
-	__index = function (table, key)
-		return _get_job_rec_field(table.job_rec_ptr, key)
-	end
-}
-job_req_meta = {
-	__index = function (table, key)
-		return _get_job_req_field(table.job_desc_ptr, key)
-	end,
-	__newindex = function (table, key, value)
-		return _set_job_req_field(table.job_desc_ptr, key, value)
-	end
-}
-part_rec_meta = {
-	__index = function (table, key)
-		return _get_part_rec_field(table.part_rec_ptr, key)
-	end
-}
-
-log_info("initialized")
+slurm.log_info("initialized")
 
 return slurm.SUCCESS

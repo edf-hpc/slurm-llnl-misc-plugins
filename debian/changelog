@@ -1,3 +1,10 @@
+slurm-llnl-misc-plugins (0.3.1) calibre8; urgency=low
+
+  * Large update of job_submit.lua for slurm 14.11.x
+  * Package job submit plugin now depends on slurm >= 14.11
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Fri, 02 Jan 2015 09:48:34 +0100
+
 slurm-llnl-misc-plugins (0.3.0) calibre8; urgency=low
 
   * Add a python script to setup mysql for SlurmDBD

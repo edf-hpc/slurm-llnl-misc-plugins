@@ -46,7 +46,8 @@ Public License can be found in `/usr/share/common-licenses/GPL'.
 QOS_SEP = "|"		-- separator for sacctmgr command ouput
 QOS_NAME_SEP = "_"	-- separator for QOS name
 NULL = 4294967294	-- numeric nil
-CORE_PER_CPU=24
+CORE_PER_CPU=28
+ESLURM_INVALID_WCKEY=2057       -- Cf /usr/include/slurm/slurm_errno.h
 
 --########################################################################--
 --
@@ -228,6 +229,42 @@ function build_qos_list ()
 	return qos_list
 end
 
+function track_wckey (job_desc, part_list, submit_uid)
+          
+	local username
+	local cmd = "getent passwd " .. submit_uid .. "| awk -F':' '{print tolower($1)}'"
+	username = os.capture(cmd) -- convert uid to logname 
+	local wckey_conf_file = "/etc/slurm-llnl/wckeysctl/wckeys"
+	wckey_conf = io.open (wckey_conf_file, "r")
+	local user_exep_file = "/etc/slurm-llnl/wckeysctl/wckeys_user_exception"
+	user_exep = io.open (user_exep_file, "r")
+ 
+	if wckey_conf ~= nil then
+		if job_desc.wckey == nil then
+			if user_exep ~= nil then
+				local exep_check = "grep -i -q -x " .. username .. " " .. user_exep_file
+				if os.execute(exep_check) == 0 then
+					slurm.log_info("slurm_wckey_exeption: job from user:%s/%u without wckey.", username, submit_uid)
+					return 0
+				end
+			end
+                        slurm.log_info("slurm_job_modify: job from user:%s/%u didn't specify any valid wckey.", username, submit_uid)
+			return ESLURM_INVALID_WCKEY
+		else
+			local wc_check = "grep -q -x " .. job_desc.wckey .. " " .. wckey_conf_file
+			if os.execute(wc_check) == 0 then	
+				slurm.log_info("slurm_job_modify: job from user:%s/%u with wckey=%s.", username, submit_uid, showstring(job_desc.wckey))
+				return 0
+			else
+				slurm.log_info("slurm_job_modify: job from user:%s/%u did specify an invalid wckey:%s", username, submit_uid, showstring(job_desc.wckey))
+				return ESLURM_INVALID_WCKEY
+			end
+		end
+	else
+		return 0
+	end
+end
+
 --########################################################################--
 --
 --  SLURM job_submit/lua interface:
@@ -235,12 +272,17 @@ end
 --########################################################################--
 
 function slurm_job_submit ( job_desc, part_list, submit_uid )
+
+	status=track_wckey (job_desc, part_list, submit_uid)
+        if status ~= 0 then
+                return status
+        end
+
 	local username
 	local qos_list = build_qos_list()
 	local maxtime
 	local maxcpus
 	local cmd =  "getent passwd " .. submit_uid .. "| awk -F':' '{print tolower($1)}'"
-
 	username = os.capture(cmd) -- convert uid to logname
 
 	-- QOS set by user

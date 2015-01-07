@@ -1,2 +1,7 @@
 job_submit/job_submit.lua		usr/lib/slurm
 job_submit/slurm-gen-qos-conf		usr/sbin
+job_submit/slurm_wckeys_setup		usr/sbin 
+job_submit/codes_metiers.csv  		etc/slurm-llnl/wckeysctl
+job_submit/codes_projets.csv            etc/slurm-llnl/wckeysctl
+job_submit/wckeys_user_exception        etc/slurm-llnl/wckeysctl
+job_submit/wckeysctl  			etc/default 

@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.3.2) calibre8; urgency=low
+
+  * Add function to force the use of wckey.
+
+ -- Antonio Russo <antonio-externe.russo@edf.fr>  Wed, 07 Jan 2015 17:48:44 +0100
+
 slurm-llnl-misc-plugins (0.3.1) calibre8; urgency=low
 
   * Large update of job_submit.lua for slurm 14.11.x

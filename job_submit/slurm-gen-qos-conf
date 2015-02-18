@@ -62,6 +62,9 @@ qos_reader = csv.reader(output_lines, delimiter='|')
 # list of all lines to write in conf file
 qos_conf = []
 
+# list of QOS to ignore for file
+excluded = [ 'dsp-ap-hpcstats' ]
+
 for qos_row in qos_reader:
 
     qos_conf_l = None
@@ -72,20 +75,31 @@ for qos_row in qos_reader:
     if len(qos_row) < 20:
         print('not enough columns in row: %d' % (len(qos_conf)))
     else:
-        if qos_row[0] != '' and qos_row[16] != '' and qos_row[19] != '':
-            qos_conf_l = "{name}|{wall}|{cpu}|\n" \
-                               .format(name=qos_row[0],
-                                       wall=qos_row[19],
-                                       cpu=qos_row[16])
-        else:
+
+        name = qos_row[0]
+        wall = qos_row[19]
+        cpu = qos_row[16]
+
+        if name == '' or wall == '' and cpu == '':
             print('skipping qos %s since missing MaxWall and/or MaxCPUs' \
-                  % (qos_row[0]))
+                  % (name))
+            continue
+        if name in excluded:
+            print('skipping qos %s because listed as excluded' \
+                  % (name))
+            continue
+
+        qos_conf_l = "{name}|{wall}|{cpu}|\n" \
+                           .format(name=name,
+                                   wall=wall,
+                                   cpu=cpu)
 
     if qos_conf_l: qos_conf.append(qos_conf_l)
 
 if len(qos_conf):
-    with open(QOS_CONF, 'w') as qosfile:
+    with open(QOS_CONF, 'w+') as qosfile:
         qosfile.writelines(sorted(qos_conf, reverse=True))
 else:
     # no valid qos line found in output of sacctmgr cmd
-    print("qos conf is empty, did not write %s" % (QOS_CONF))
+    with open(QOS_CONF, 'w+'): pass
+    print("qos conf is empty, write empty file %s" % (QOS_CONF))

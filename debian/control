@@ -11,8 +11,6 @@ Architecture: all
 Depends:
  ${shlibs:Depends},
  ${misc:Depends}
-Recommends:
- slurm-llnl
 Description: Generic Prolog and Epilog scripts for Slurm
  The job scheduler Slurm can execute so called Prolog and Epilog scripts
  at different stages of each job. For each stage, one script has to appear

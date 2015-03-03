@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.3.4) calibre8; urgency=low
+
+  * Do not recommend slurm-llnl anymore.
+
+ -- Mehdi Dogguy <mehdi.dogguy@edf.fr>  Tue, 03 Mar 2015 11:54:42 +0100
+
 slurm-llnl-misc-plugins (0.3.3) calibre8; urgency=low
 
   * Add QOS exceptions in slurm-gen-qos-conf

@@ -21,7 +21,8 @@
 
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 CMD=$(basename $0)
-. /etc/default/wckeysctl
+[ -f /etc/default/wckeysctl ] && source /etc/default/wckeysctl
+[ -f /etc/slurm-llnl/slurmdbd.conf ] && source /etc/slurm-llnl/slurmdbd.conf
 
 print_error () {
         echo -e "\e[00;31m$2\e[00m" 1>&2
@@ -82,8 +83,7 @@ do
     echo "${project}:${application}"
   done >> ${WCKEYS_TMP_FILE}
 done
-cat ${WCKEYS_TMP_FILE} | sort -u > ${WCKEYS_FILE}
-
+cat ${WCKEYS_TMP_FILE} | sort -u | tr '[:lower:]' '[:upper:]' > ${WCKEYS_FILE}
 
 ### Block 2 ###
 ### Generate add and delete files ###

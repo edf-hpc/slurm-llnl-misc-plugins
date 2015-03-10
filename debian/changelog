@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.3.5) calibre8; urgency=low
+
+  * Somes fixes in shell script slurm_wckeys_setup.sh
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Tue, 10 Mar 2015 18:50:28 +0100
+
 slurm-llnl-misc-plugins (0.3.4) calibre8; urgency=low
 
   * Do not recommend slurm-llnl anymore.

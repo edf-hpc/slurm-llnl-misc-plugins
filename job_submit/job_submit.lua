@@ -215,7 +215,7 @@ function build_qos_list ()
 		-- table.sort(qos_list) -- sort qos (optional)
 		for i, qos in ipairs(qos_list) do
 			if qos_list[qos] ~= nil then
-				-- table.sort(qos_list[qos]) --sort maxcpus
+				table.sort(qos_list[qos]) --sort maxcpus
               			for j, maxcpus in ipairs(qos_list[qos]) do
 					if qos_list[qos][maxcpus] ~= nil then
 						-- table.sort(qos_list[qos][maxcpus], function(x,y) return tonumber(x) < tonumber(y) end) --sort duration
@@ -285,7 +285,8 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
 	local cmd =  "getent passwd " .. submit_uid .. "| awk -F':' '{print tolower($1)}'"
 	username = os.capture(cmd) -- convert uid to logname
 
-	-- QOS set by user
+	-- QOS set by user. In this case, the script simply sets the partition
+	-- accordingly.
 	if job_desc.qos ~= nil then
 
 		local t = split(job_desc.qos, QOS_NAME_SEP)
@@ -296,40 +297,55 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
 			job_desc.partition = partition
 		end
 	else
+		-- The user did not set the QOS explicitely
+
+		-- If the user did not set the partition, set the default
+		-- partition in slurm configuration
+
+		if job_desc.partition == nil then
+			for name, part in pairs(part_list) do
+				if part.flag_default == 1 then
+					job_desc.partition = part.name
+					break
+				end
+			end
+		end
+
+		-- If not set by user, set hard-coded timelimit
 		if job_desc.time_limit == NULL then -- no time limit
 			job_desc.time_limit = 60 -- 1 heure
 		end
-
+		-- If not set by user, set hard-coded min cpus
 		if job_desc.min_cpus == nil then -- no cpu limit
 			job_desc.min_cpus = 1
 		end
 
-		-- Define QOS
-
-		-- Search maxcpus limit and time limit best combinaison
+		-- Find the first QOS in qos_list that matches jobs cpus and
+		-- and time limit
 		if qos_list ~= nil then
-			for h, u in pairs (qos_list) do -- research by partition
-				if job_desc.partition == nil or job_desc.partition == u then
-					maxcpus = ""
+			for i, part in pairs (qos_list) do
+				-- Restrict to QOS compatible with the partition only
+				if job_desc.partition == nil or job_desc.partition == part then
 
-					if qos_list[u] ~= nil then
-						for i, v in ipairs(qos_list[u]) do -- research best maxcpus
-							if job_desc.min_cpus <= tonumber(v) and (job_desc.max_nodes == NULL or job_desc.max_nodes <= tonumber(v) / CORE_PER_CPU) then
+					maxcpus = 0
 
-								maxcpus = v
-								maxtime=0
-								if qos_list[u][maxcpus] ~= nil then
-									for j, w in ipairs(qos_list[u][maxcpus]) do -- research best time
-										if job_desc.time_limit <= tonumber(w) then
-											maxtime = w
+					if qos_list[part] ~= nil then
+						for j, maxcpus in ipairs(qos_list[part]) do
+							if job_desc.min_cpus <= tonumber(maxcpus) and (job_desc.max_nodes == NULL or job_desc.max_nodes <= tonumber(maxcpus) / CORE_PER_CPU) then
+
+								found_maxtime = 0
+								if qos_list[part][maxcpus] ~= nil then
+									for k, qos_maxtime in ipairs(qos_list[part][maxcpus]) do
+										slurm.log_info("slurm_job_submit: testing qos %s part %s maxcpu %d maxtime %d", i, part, maxcpus, qos_maxtime)
+										if job_desc.time_limit <= tonumber(qos_maxtime) then
+											found_maxtime = qos_maxtime
 											break
 										end
 									end
 
-									if maxtime ~= 0 then -- limit not yet found out
-										-- Will give the best QOS
-										job_desc.qos = qos_list[u][maxcpus][maxtime]
-										job_desc.partition = u
+									if found_maxtime ~= 0 then
+										job_desc.qos = qos_list[part][maxcpus][found_maxtime]
+										job_desc.partition = part
 										break
 									end
 								end

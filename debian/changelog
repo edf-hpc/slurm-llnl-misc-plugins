@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.3.6) calibre8; urgency=low
+
+  * Fix job submit LUA script
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Wed, 11 Mar 2015 14:40:32 +0100
+
 slurm-llnl-misc-plugins (0.3.5) calibre8; urgency=low
 
   * Somes fixes in shell script slurm_wckeys_setup.sh

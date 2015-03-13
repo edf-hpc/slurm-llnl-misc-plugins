@@ -46,7 +46,7 @@ Public License can be found in `/usr/share/common-licenses/GPL'.
 QOS_SEP = "|"		-- separator for sacctmgr command ouput
 QOS_NAME_SEP = "_"	-- separator for QOS name
 NULL = 4294967294	-- numeric nil
-CORE_PER_CPU=28
+CORES_PER_NODE=28
 ESLURM_INVALID_WCKEY=2057       -- Cf /usr/include/slurm/slurm_errno.h
 
 --########################################################################--
@@ -320,6 +320,13 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
 			job_desc.min_cpus = 1
 		end
 
+		-- If jobs are exclusive, multiply job min_nodes with CORES_PER_NODE
+		-- to avoid job being abusively associated with seq QOS
+		considered_min_cpus = job_desc.min_cpus
+		if job_desc.shared == 0 then
+			considered_min_cpus = job_desc.min_nodes * CORES_PER_NODE
+		end
+
 		-- Find the first QOS in qos_list that matches jobs cpus and
 		-- and time limit
 		if qos_list ~= nil then
@@ -331,7 +338,7 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
 
 					if qos_list[part] ~= nil then
 						for j, maxcpus in ipairs(qos_list[part]) do
-							if job_desc.min_cpus <= tonumber(maxcpus) and (job_desc.max_nodes == NULL or job_desc.max_nodes <= tonumber(maxcpus) / CORE_PER_CPU) then
+							if considered_min_cpus <= tonumber(maxcpus) and (job_desc.max_nodes == NULL or job_desc.max_nodes <= tonumber(maxcpus) / CORES_PER_NODE) then
 
 								found_maxtime = 0
 								if qos_list[part][maxcpus] ~= nil then
@@ -358,7 +365,7 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
 
 	end
 
-	slurm.log_info("slurm_job_submit: job from user:%s/%u minutes:%u cpus/nodes:%u partition:%s QOS:%s", username, submit_uid, job_desc.time_limit, job_desc.min_cpus, showstring(job_desc.partition), showstring(job_desc.qos))
+	slurm.log_info("slurm_job_submit: job from user:%s/%u minutes:%u cpus/nodes:%u shared:%u partition:%s QOS:%s", username, submit_uid, job_desc.time_limit, job_desc.min_cpus, job_desc.shared, showstring(job_desc.partition), showstring(job_desc.qos))
 
 	return slurm.SUCCESS
 end

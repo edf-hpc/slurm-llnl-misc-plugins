@@ -136,7 +136,7 @@ function to_minute(inputstr)
 				m, s = string.match (inputstr, "^(%d*):(%d*)$")
 				if m ~= nil and  s ~= nil then -- minutes:seconds indicated
 					-- seconds ceiled to one minute if greater than 1
-					return m * 60 + math.ceil(s/60)
+					return m + math.ceil(s/60)
 				else
 					h,m,s = string.match (inputstr, "^(%d*):(%d*):(%d*)$")
 					if h ~= nil and  m ~= nil and s ~= nil then -- hours:minutes:seconds indicated
@@ -149,13 +149,13 @@ function to_minute(inputstr)
 			d = d * 24 * 60 --converted to minutes
 			m = string.match (t, "^(%d*)$")
 			if m ~= nil then -- hours indicated
-				return j + m
+				return d + m
 			else
-				h, m = string.match (t, "^(%d*):(%d*)$") -- hours:minutes indicated
+				h, m = string.match (t, "^(%d+):(%d+)$") -- hours:minutes indicated
 				if h ~= nil and  m ~= nil then
 					return d + h * 60 + m
 				else
-					h,m,s = string.match (t, "^(%d*):(%d*):(%d*)$") -- hours:minutes:seconds indicated
+					h, m, s = string.match (t, "^(%d+):(%d+):(%d+)$") -- hours:minutes:seconds indicated
 					if h ~= nil and  m ~= nil and s ~= nil then
 						return d + h * 60 + m + math.ceil(s/60)
 					end
@@ -212,14 +212,13 @@ function build_qos_list ()
 
 	-- Sort  all tables
 	if qos_list ~= nil then
-		-- table.sort(qos_list) -- sort qos (optional)
+		-- table.sort(qos_list, function(a,b) return a < b end) -- sort qos (optional)
 		for i, qos in ipairs(qos_list) do
 			if qos_list[qos] ~= nil then
-				table.sort(qos_list[qos]) --sort maxcpus
+				table.sort(qos_list[qos], function(a,b) return tonumber(a) < tonumber(b) end) --sort maxcpus
               			for j, maxcpus in ipairs(qos_list[qos]) do
 					if qos_list[qos][maxcpus] ~= nil then
-						-- table.sort(qos_list[qos][maxcpus], function(x,y) return tonumber(x) < tonumber(y) end) --sort duration
-						table.sort(qos_list[qos][maxcpus]) --sort duration
+						table.sort(qos_list[qos][maxcpus], function(a,b) return tonumber(a) < tonumber(b) end) --sort duration
 					end
 				end
 			end
@@ -251,6 +250,10 @@ function track_wckey (job_desc, part_list, submit_uid)
                         slurm.log_info("slurm_job_modify: job from user:%s/%u didn't specify any valid wckey.", username, submit_uid)
 			return ESLURM_INVALID_WCKEY
 		else
+			-- Convert wckey to lowercase  --
+			if job_desc.wckey ~= nil then
+				job_desc.wckey = string.lower(job_desc.wckey)
+			end
 			local wc_check = "grep -q -x " .. job_desc.wckey .. " " .. wckey_conf_file
 			if os.execute(wc_check) == 0 then	
 				slurm.log_info("slurm_job_modify: job from user:%s/%u with wckey=%s.", username, submit_uid, showstring(job_desc.wckey))
@@ -299,18 +302,6 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
 	else
 		-- The user did not set the QOS explicitely
 
-		-- If the user did not set the partition, set the default
-		-- partition in slurm configuration
-
-		if job_desc.partition == nil then
-			for name, part in pairs(part_list) do
-				if part.flag_default == 1 then
-					job_desc.partition = part.name
-					break
-				end
-			end
-		end
-
 		-- If not set by user, set hard-coded timelimit
 		if job_desc.time_limit == NULL then -- no time limit
 			job_desc.time_limit = 60 -- 1 heure
@@ -327,14 +318,20 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
 			considered_min_cpus = job_desc.min_nodes * CORES_PER_NODE
 		end
 
+		if job_desc.partition ~= nil then
+			slurm.log_info("slurm_job_submit: partition %s specified by user.", job_desc.partition)
+		end
+
+		if job_desc.qos ~= nil then
+			slurm.log_info("slurm_job_submit: qos %s specified by user.", job_desc.qos)
+		end
+
 		-- Find the first QOS in qos_list that matches jobs cpus and
 		-- and time limit
 		if qos_list ~= nil then
 			for i, part in pairs (qos_list) do
 				-- Restrict to QOS compatible with the partition only
 				if job_desc.partition == nil or job_desc.partition == part then
-
-					maxcpus = 0
 
 					if qos_list[part] ~= nil then
 						for j, maxcpus in ipairs(qos_list[part]) do
@@ -343,7 +340,6 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
 								found_maxtime = 0
 								if qos_list[part][maxcpus] ~= nil then
 									for k, qos_maxtime in ipairs(qos_list[part][maxcpus]) do
-										slurm.log_info("slurm_job_submit: testing qos %s part %s maxcpu %d maxtime %d", i, part, maxcpus, qos_maxtime)
 										if job_desc.time_limit <= tonumber(qos_maxtime) then
 											found_maxtime = qos_maxtime
 											break
@@ -363,6 +359,18 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
 			end
 		end
 
+		-- If the user did not set the partition, set the default
+		-- partition in slurm configuration
+
+		if job_desc.partition == nil then
+			for name, part in pairs(part_list) do
+				if part.flag_default == 1 then
+					job_desc.partition = part.name
+					break
+				end
+			end
+		end
+
 	end
 
 	slurm.log_info("slurm_job_submit: job from user:%s/%u minutes:%u cpus/nodes:%u shared:%u partition:%s QOS:%s", username, submit_uid, job_desc.time_limit, job_desc.min_cpus, job_desc.shared, showstring(job_desc.partition), showstring(job_desc.qos))
@@ -373,9 +381,7 @@ end
 --========================================================================--
 
 function slurm_job_modify ( job_desc, job_rec, part_list, modify_uid )
-
 	return slurm.SUCCESS
-
 end
 
 slurm.log_info("initialized")

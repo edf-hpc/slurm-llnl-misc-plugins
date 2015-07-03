@@ -16,7 +16,7 @@ if [ x$SLURM_JOB_ID == "x" ] ; then
 fi
 
 # Don't try to kill user root or system daemon jobs
-if [ $SLURM_UID -lt 59999 ] || [ $SLURM_UID -gt 64000 ] ; then
+if [ $SLURM_UID -lt 1000 ] ; then
 	exit 0
 fi
 

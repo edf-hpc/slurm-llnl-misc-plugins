@@ -18,10 +18,9 @@ if [ $SLURM_UID -lt 1000 ] ; then
 fi
 
 # Don't do anything if there other jobs running of the same user
-job_list=`${SLURM_BIN}squeue --noheader --format=%i --user=$SLURM_UID --node=localhost`
-for job_id in $job_list
-do
-	if [ $job_id -ne $SLURM_JOB_ID ] ; then
+job_list=`squeue --noheader --format=%i --user=$SLURM_UID --node=localhost`
+for job_id in $job_list; do
+	if [ "$job_id" != "$SLURM_JOB_ID" ]; then
 		exit 0
 	fi
 done

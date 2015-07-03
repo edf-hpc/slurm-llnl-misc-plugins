@@ -4,10 +4,7 @@
 # SLURM job there ends. For example, if a user directly logs into
 # an allocated node SLURM will not kill that process without this
 # script being executed as an epilog.
-#
-# SLURM_BIN can be used for testing with private version of SLURM
-#SLURM_BIN="/usr/bin/"
-#
+
 if [ x$SLURM_UID == "x" ] ; then 
 	exit 0
 fi

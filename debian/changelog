@@ -1,3 +1,11 @@
+slurm-llnl-misc-plugins (0.3.7) calibre8; urgency=low
+
+  * Fix clean epilog script
+    - Do not fail when JOB_ID is not numeric
+    - Do not consider UIDs less than 1000
+
+ -- Mehdi Dogguy <mehdi.dogguy@edf.fr>  Fri, 17 Jul 2015 11:44:06 +0200
+
 slurm-llnl-misc-plugins (0.3.6) calibre8; urgency=low
 
   * Fix job submit LUA script

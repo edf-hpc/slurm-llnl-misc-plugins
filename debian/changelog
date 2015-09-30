@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.3.9) calibre8; urgency=low
+
+  * Add job fields in slurm log to help debug in Lua submit plugin
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Wed, 30 Sep 2015 11:53:08 +0200
+
 slurm-llnl-misc-plugins (0.3.8) calibre8; urgency=low
 
   * All changes are relative to the job_submit.lua script.

@@ -376,11 +376,14 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
 
    end
 
-   slurm.log_info("slurm_job_submit: job from user:%s/%u minutes:%u cores:%u shared:%u partition:%s QOS:%s",
+   slurm.log_info("slurm_job_submit: job from user:%s/%u minutes:%u cores:%u-%u nodes:%u-%u shared:%u partition:%s QOS:%s",
                   username,
                   submit_uid,
                   job_desc.time_limit,
                   job_desc.min_cpus,
+                  job_desc.max_cpus,
+                  job_desc.min_nodes,
+                  job_desc.max_nodes,
                   job_desc.shared,
                   showstring(job_desc.partition),
                   showstring(job_desc.qos))

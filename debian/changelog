@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.4.0) calibre8; urgency=low
+
+  * Add new sync-accounts package
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Thu, 08 Oct 2015 15:51:15 +0200
+
 slurm-llnl-misc-plugins (0.3.9) calibre8; urgency=low
 
   * Add job fields in slurm log to help debug in Lua submit plugin

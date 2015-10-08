@@ -1,0 +1,238 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+##############################################################################
+# Copyright (C) 2015 EDF SA                                                  #
+#                                                                            #
+# Author: Rémi Palancher <remi-externe.palancher@edf.fr>                     #
+#                                                                            #
+# This file is part of slurm-llnl-misc-plugins.                              #
+#                                                                            #
+# This software is governed by the CeCILL-C license under French law and     #
+# abiding by the rules of distribution of free software. You can use,        #
+# modify and/ or redistribute the software under the terms of the CeCILL-C   #
+# license as circulated by CEA, CNRS and INRIA at the following URL          #
+# "http://www.cecill.info".                                                  #
+#                                                                            #
+# As a counterpart to the access to the source code and rights to copy,      #
+# modify and redistribute granted by the license, users are provided only    #
+# with a limited warranty and the software's author, the holder of the       #
+# economic rights, and the successive licensors have only limited            #
+# liability.                                                                 #
+#                                                                            #
+# In this respect, the user's attention is drawn to the risks associated     #
+# with loading, using, modifying and/or developing or reproducing the        #
+# software by the user in light of its specific status of free software,     #
+# that may mean that it is complicated to manipulate, and that also          #
+# therefore means that it is reserved for developers and experienced         #
+# professionals having in-depth computer knowledge. Users are therefore      #
+# encouraged to load and test the software's suitability as regards their    #
+# requirements in conditions enabling the security of their systems and/or   #
+# data to be ensured and, more generally, to use and operate it in the       #
+# same conditions as regards security.                                       #
+#                                                                            #
+# The fact that you are presently reading this means that you have had       #
+# knowledge of the CeCILL-C license and that you accept its terms.           #
+#                                                                            #
+##############################################################################
+
+import os
+import sys
+import ConfigParser
+import grp
+import subprocess
+import csv
+
+import argparse
+
+import logging
+import logging.handlers
+
+# conf global variable
+conf = None
+logger = None
+args = None
+
+# This list specifies list of users that should normally be present in SlurmDBD
+# but not necessarily in users group, and therefore should not be removed from
+# SlurmDBD.
+IGNORED_SLURM_USERS = [ 'root' ]
+
+class Conf(object):
+    """Runtime configuration class"""
+
+    def __init__(self, filename='/etc/slurm-llnl/sync-accounts.conf'):
+        self.filename = filename
+        self.org = None
+        self.cluster = None
+        self.group = None
+        self.policy = None
+
+        # global_account policy specific params
+        self.acct_name = None
+        self.acct_desc = None
+
+    def parse(self):
+        """Parse the configuration file"""
+
+        if not os.path.isfile(self.filename):
+            die("failed to parse config file {filename}" \
+                .format(filename=self.filename))
+
+        parser = ConfigParser.ConfigParser()
+        parser.read(self.filename)
+
+        self.cluster = parser.get('main', 'cluster')
+        self.org = parser.get('main', 'org')
+        self.group = parser.get('main', 'group')
+        self.policy = parser.get('main', 'policy')
+
+        available_policies = [ 'global_account', 'user_account' ]
+        if not self.policy in available_policies:
+            die("invalid policy {policy}" \
+                .format(policy=self.policy))
+
+        if self.policy_global is True:
+            self.acct_name = parser.get('global_account', 'name')
+            self.acct_desc = parser.get('global_account', 'desc')
+
+    @property
+    def policy_global(self):
+       return self.policy == 'global_account'
+
+def die(msg):
+
+    logger.critical(msg)
+    sys.exit(1)
+
+def run_or_die(cmd):
+
+    logger.debug("run: {cmd}".format(cmd=' '.join(cmd)))
+    try:
+        if args.dry_run is False:
+            subprocess.check_call(cmd)
+    except subprocess.CalledProcessError, e:
+        die("error while running command: {cmd}: {error}" \
+            .format(cmd=' '.join(cmd), error=e))
+
+def get_group_users():
+
+    entry = grp.getgrnam(conf.group)
+    return [ user.lower() for user in entry[3] ]
+
+def check_acct(name):
+
+    cmd = [ 'sacctmgr', '-n', 'show', 'Account', name ]
+    logger.debug("run: {cmd}".format(cmd=' '.join(cmd)))
+    output = subprocess.check_output(cmd)
+    return len(output) > 0
+
+def create_acct(name, desc):
+
+    logger.info("creating account {acct}".format(acct=name))
+    cmd = ['sacctmgr', '-i', 'add' 'account', name,
+           "Cluster='{cluster}'".format(conf.cluster),
+           "Description='{desc}'".format(desc=desc),
+           "Organization='{org}'".format(org=conf.org) ]
+    run_or_die(cmd)
+
+def ensure_acct(name, desc):
+
+    if check_acct(name) is False:
+        create_acct(name, desc)
+
+def remove_acct(name):
+
+    logger.info("deleting account {acct}".format(acct=name))
+    cmd = [ 'sacctmgr', '-i', 'delete', 'account', name ]
+    run_or_die(cmd)
+
+def create_user(name, account):
+
+    logger.info("creating user {user}".format(user=name))
+    cmd = [ 'sacctmgr', '-i', 'add', 'user', name,
+            "DefaultAccount={acct}".format(acct=account) ]
+    run_or_die(cmd)
+
+def remove_user(name):
+
+    logger.info("deleting user {user}".format(user=name))
+    cmd = [ 'sacctmgr', '-i', 'delete', 'user', name ]
+    run_or_die(cmd)
+
+def get_slurm_users():
+
+    users = []
+    cmd = [ 'sacctmgr', 'show', 'user', '--parsable', '--noheader' ]
+    logger.debug("run: {cmd}".format(cmd=' '.join(cmd)))
+    output = subprocess.check_output(cmd)
+    reader = csv.reader(output.strip().split('\n'), delimiter='|')
+    for row in reader:
+        user = row[0]
+        if user not in IGNORED_SLURM_USERS:
+            users.append(user)
+
+    return users
+
+def parse_args():
+
+    global args
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dry-run", help="Do nothing, just print what it would do.", action="store_true")
+    parser.add_argument("--debug", help="Debug mode.", action="store_true")
+    args = parser.parse_args()
+
+def init_logger():
+
+    global logger
+    logger = logging.getLogger(__file__)
+    if args.debug is True:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
+
+    if args.debug is True or args.dry_run is True:
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter('%(levelname)s: %(message)s')
+    else:
+        handler = logging.handlers.SysLogHandler(address='/dev/log')
+        formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+def main():
+
+    global conf
+
+    parse_args()
+    init_logger()
+
+    conf = Conf()
+    conf.parse()
+
+    if conf.policy_global is True:
+        ensure_acct(conf.acct_name, conf.acct_desc)
+
+    users_group = get_group_users()
+    users_slurm = get_slurm_users()
+
+    for user in users_group:
+        if user not in users_slurm:
+            # create user and eventually account
+            if conf.policy_global is True:
+                create_user(user, conf.acct_name)
+            else:
+                acct_desc = "user {user} default account".format(user=user)
+                create_acct(user, acct_desc)
+                create_user(user, user)
+
+    for user in users_slurm:
+        if user not in users_group:
+            # delete user and eventually account
+            if conf.policy_global is False:
+                remove_acct(user)
+            remove_user(user)
+
+if __name__ == '__main__':
+
+    main()

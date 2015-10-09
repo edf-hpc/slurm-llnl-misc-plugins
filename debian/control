@@ -66,6 +66,7 @@ Depends:
  python,
  python-argparse | python (>= 2.7),
  cron,
+ slurm-client
 Description: Script to keep accounts in sync in SlurmDBD
  This package provides a Python script and a cronjob to sync cluster group
  members with users and accounts in SlurmDBD.

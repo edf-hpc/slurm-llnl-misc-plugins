@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.4.1) calibre8; urgency=low
+
+  * sync-accounts: add missing dep on slurm-client
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Fri, 09 Oct 2015 08:58:29 +0200
+
 slurm-llnl-misc-plugins (0.4.0) calibre8; urgency=low
 
   * Add new sync-accounts package

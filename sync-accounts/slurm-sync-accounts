@@ -107,12 +107,11 @@ def die(msg):
 def run_or_die(cmd):
 
     logger.debug("run: {cmd}".format(cmd=' '.join(cmd)))
-    try:
-        if args.dry_run is False:
-            subprocess.check_call(cmd)
-    except subprocess.CalledProcessError, e:
-        die("error while running command: {cmd}: {error}" \
-            .format(cmd=' '.join(cmd), error=e))
+    if args.dry_run is False:
+        returncode = subprocess.call(cmd)
+        if returncode:
+            die("error while running command: {cmd}: {error}" \
+                .format(cmd=' '.join(cmd), error=str(returncode)))
 
 def get_group_users():
 
@@ -123,7 +122,7 @@ def check_acct(name):
 
     cmd = [ 'sacctmgr', '-n', 'show', 'Account', name ]
     logger.debug("run: {cmd}".format(cmd=' '.join(cmd)))
-    output = subprocess.check_output(cmd)
+    output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
     return len(output) > 0
 
 def create_acct(name, desc):
@@ -164,7 +163,7 @@ def get_slurm_users():
     users = []
     cmd = [ 'sacctmgr', 'show', 'user', '--parsable', '--noheader' ]
     logger.debug("run: {cmd}".format(cmd=' '.join(cmd)))
-    output = subprocess.check_output(cmd)
+    output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
     reader = csv.reader(output.strip().split('\n'), delimiter='|')
     for row in reader:
         user = row[0]

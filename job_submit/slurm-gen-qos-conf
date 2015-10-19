@@ -49,7 +49,7 @@ QOS_CONF = "/etc/slurm-llnl/qos.conf"
 cmd = [ 'sacctmgr', 'show', 'qos', '--parsable2', '--noheader' ]
 output = None
 try:
-    output = subprocess.check_output(cmd)
+    output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
 except subprocess.CalledProcessError, e:
     print("error while executing sacctmgr: %s" % (str(e)))
     sys.exit(1)
@@ -97,9 +97,8 @@ for qos_row in qos_reader:
     if qos_conf_l: qos_conf.append(qos_conf_l)
 
 if len(qos_conf):
-    with open(QOS_CONF, 'w+') as qosfile:
+    with open(QOS_CONF, 'w') as qosfile:
         qosfile.writelines(sorted(qos_conf, reverse=True))
 else:
     # no valid qos line found in output of sacctmgr cmd
-    with open(QOS_CONF, 'w+'): pass
-    print("qos conf is empty, write empty file %s" % (QOS_CONF))
+    print("qos conf is empty, did not write %s" % (QOS_CONF))

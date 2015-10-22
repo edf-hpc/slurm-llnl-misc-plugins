@@ -62,7 +62,7 @@ if [ -f "${CODES_FILE}" ]
 then
   CODES_LIST=$(iconv -f 437 -t ascii//TRANSLIT ${CODES_FILE} | \
   awk -F';' '{gsub (/[ )]$/, "", $1 ); print tolower($1)}' | \
-  tr '[:blank:][:punct:]' '_' | sed -r -e 's/[_]+/_/g' -e 's/^[_]+//g' -e 's/[_]+$//g' | sort -u)
+  tr '[:blank:]' '_' | sed -r -e 's/[_]+/_/g' -e 's/^[_]+//g' -e 's/[_]+$//g' | sort -u)
 else
   print_error 1 "File not found: ${CODES_FILE}"
 fi

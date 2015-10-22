@@ -124,7 +124,7 @@ do
 cat > ${TMP_FILE_MYSQL} << EOF
 UPDATE ${DB_NAME}.${CLUSTERNAME}_wckey_table SET deleted = 1 WHERE wckey_name = '${key}';
 EOF
-  mysql < ${TMP_FILE_MYSQL}
+  mysql --host=${StorageHost} --user=${StorageUser} --password=${StoragePass} < ${TMP_FILE_MYSQL}
   print_msg "Del old wckey= ${key}"
 done
 

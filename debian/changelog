@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.4.3+c9+1) calibre9; urgency=low
+
+  * Backport to Calibre9.
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Thu, 22 Oct 2015 16:16:41 +0200
+
 slurm-llnl-misc-plugins (0.4.3) unstable; urgency=low
 
   * Remove all trailing whitespaces in slurm_wckeys_setup.sh

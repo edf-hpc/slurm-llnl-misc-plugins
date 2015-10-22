@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 # slurm_wckeys_setup.sh is part of Calibre
 #
 # Copyright (C) 2015 EDF SA
@@ -36,7 +36,7 @@ print_msg () {
 
 ### Block 0 ###
 ### Create temporaries files and directories ###
-TMP_MNT_POINT=$(mktemp -d) 
+TMP_MNT_POINT=$(mktemp -d)
 mount -t tmpfs -o size=20m tmpfs ${TMP_MNT_POINT}
 
 WCKEYS_TMP_FILE=$(tempfile -d ${TMP_MNT_POINT})
@@ -88,13 +88,13 @@ cat ${WCKEYS_TMP_FILE} | sort -u | tr '[:lower:]' '[:upper:]' > ${WCKEYS_FILE}
 ### Block 2 ###
 ### Generate add and delete files ###
 
-${SACCTMGR} -np list wckeys | awk -F'|' '{ print $1 }' | sort -u > ${WCKEYS_INDB_TMP_FILE}   
-comm -23 ${WCKEYS_INDB_TMP_FILE} ${WCKEYS_FILE} > ${WCKEYS_DEL_TMP_FILE} 
-comm -13 ${WCKEYS_INDB_TMP_FILE} ${WCKEYS_FILE} > ${WCKEYS_ADD_TMP_FILE} 
+${SACCTMGR} -np list wckeys | awk -F'|' '{ print $1 }' | sort -u > ${WCKEYS_INDB_TMP_FILE}
+comm -23 ${WCKEYS_INDB_TMP_FILE} ${WCKEYS_FILE} > ${WCKEYS_DEL_TMP_FILE}
+comm -13 ${WCKEYS_INDB_TMP_FILE} ${WCKEYS_FILE} > ${WCKEYS_ADD_TMP_FILE}
 
 ### Block 3 ###
 ### Insert wckeys into slurm database ###
-for key in $(cat ${WCKEYS_ADD_TMP_FILE}) 
+for key in $(cat ${WCKEYS_ADD_TMP_FILE})
 do
   DATE=$(date "+%s")
 
@@ -102,17 +102,17 @@ cat > ${TMP_FILE_MYSQL} << EOF
 UPDATE ${DB_NAME}.${CLUSTERNAME}_wckey_table SET deleted = 0 WHERE wckey_name = '${key}';
 INSERT INTO ${DB_NAME}.${CLUSTERNAME}_wckey_table
   (creation_time, mod_time, wckey_name, user)
-SELECT 
+SELECT
   '${DATE}','${DATE}','${key}','root'
 FROM ${DB_NAME}.${CLUSTERNAME}_wckey_table
-WHERE '${key}' NOT IN 
+WHERE '${key}' NOT IN
 (
-  SELECT wckey_name 
+  SELECT wckey_name
   FROM ${DB_NAME}.${CLUSTERNAME}_wckey_table
 )
-LIMIT 1 
+LIMIT 1
 EOF
-  mysql --host=${StorageHost} --user=${StorageUser} --password=${StoragePass} < ${TMP_FILE_MYSQL} 
+  mysql --host=${StorageHost} --user=${StorageUser} --password=${StoragePass} < ${TMP_FILE_MYSQL}
   print_msg "Add new wckey= ${key}"
 done
 
@@ -131,4 +131,4 @@ done
 ### Block 5 ###
 ### Clean system ###
 umount ${TMP_MNT_POINT}
-rm -rf  ${TMP_MNT_POINT} 
+rm -rf  ${TMP_MNT_POINT}

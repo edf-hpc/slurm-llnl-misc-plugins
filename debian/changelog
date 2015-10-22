@@ -1,3 +1,12 @@
+slurm-llnl-misc-plugins (0.4.3) unstable; urgency=low
+
+  * Remove all trailing whitespaces in slurm_wckeys_setup.sh
+  * Fix mysql command params in slurm_wckeys_setup.sh
+  * Do not convert in uppercase in final wckeys file
+  * Do not convert dash into underscore anymore
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Thu, 22 Oct 2015 16:08:04 +0200
+
 slurm-llnl-misc-plugins (0.4.2) unstable; urgency=low
 
   * Backport slurm-sync-accounts to python 2.6

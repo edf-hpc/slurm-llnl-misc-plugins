@@ -83,7 +83,7 @@ do
     echo "${project}:${application}"
   done >> ${WCKEYS_TMP_FILE}
 done
-cat ${WCKEYS_TMP_FILE} | sort -u | tr '[:lower:]' '[:upper:]' > ${WCKEYS_FILE}
+sort -u ${WCKEYS_TMP_FILE} -o ${WCKEYS_FILE}
 
 ### Block 2 ###
 ### Generate add and delete files ###

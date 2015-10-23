@@ -1,3 +1,11 @@
+slurm-llnl-misc-plugins (0.4.4) unstable; urgency=low
+
+  * job-submit: Remove examples CSV and user exception files since
+    these examples are irrelevant in production.
+  * sync-accounts: Remove user before account w/ user_account policy
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Fri, 23 Oct 2015 14:42:29 +0200
+
 slurm-llnl-misc-plugins (0.4.3+c7+1) calibre7; urgency=low
 
   * Backport to Calibre7

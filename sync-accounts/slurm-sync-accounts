@@ -228,9 +228,9 @@ def main():
     for user in users_slurm:
         if user not in users_group:
             # delete user and eventually account
+            remove_user(user)
             if conf.policy_global is False:
                 remove_acct(user)
-            remove_user(user)
 
 if __name__ == '__main__':
 

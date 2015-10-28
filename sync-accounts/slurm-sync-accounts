@@ -128,8 +128,8 @@ def check_acct(name):
 def create_acct(name, desc):
 
     logger.info("creating account {acct}".format(acct=name))
-    cmd = ['sacctmgr', '-i', 'add' 'account', name,
-           "Cluster='{cluster}'".format(conf.cluster),
+    cmd = ['sacctmgr', '-i', 'add', 'account', name,
+           "Cluster='{cluster}'".format(cluster=conf.cluster),
            "Description='{desc}'".format(desc=desc),
            "Organization='{org}'".format(org=conf.org) ]
     run_or_die(cmd)

@@ -46,7 +46,7 @@ import csv
 QOS_CONF = "/etc/slurm-llnl/qos.conf"
 
 # run sacctmgr to get the list of qos
-cmd = [ 'sacctmgr', 'show', 'qos', '--parsable2', '--noheader' ]
+cmd = [ 'sacctmgr', '--noheader', '--parsable', 'show', 'qos', 'format="Name,MaxWall,MaxCPUs"' ]
 output = None
 try:
     output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
@@ -57,7 +57,8 @@ except subprocess.CalledProcessError, e:
 output_lines = output.split('\n')
 output_lines.pop() # remove last empty line
 
-qos_reader = csv.reader(output_lines, delimiter='|')
+fieldnames = ['name', 'walltime', 'max_cpus']
+qos_reader = csv.DictReader(output_lines, fieldnames=fieldnames, delimiter='|')
 
 # list of all lines to write in conf file
 qos_conf = []
@@ -68,20 +69,16 @@ excluded = [ 'dsp-ap-hpcstats' ]
 for qos_row in qos_reader:
 
     qos_conf_l = None
-    # columns of interest for qos.conf:
-    #   0 : Name
-    #   19: MaxWall
-    #   16: MaxCPUs
-    if len(qos_row) < 20:
+    if len(qos_row) < 2:
         print('not enough columns in row: %d' % (len(qos_conf)))
     else:
 
-        name = qos_row[0]
-        wall = qos_row[19]
-        cpu = qos_row[16]
+        name = qos_row['name']
+        wall = qos_row['walltime']
+        cpu = qos_row['max_cpus']
 
-        if name == '' or wall == '' and cpu == '':
-            print('skipping qos %s since missing MaxWall and/or MaxCPUs' \
+        if name == '' or (wall == '' and cpu == ''):
+            print('skipping qos %s since MaxWall and MaxCPUs are missing' \
                   % (name))
             continue
         if name in excluded:

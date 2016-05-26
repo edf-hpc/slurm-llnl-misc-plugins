@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.4.7) calibre9; urgency=medium
+
+  * sync-account: add opts creation cmd params
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Thu, 26 May 2016 09:32:48 +0200
+
 slurm-llnl-misc-plugins (0.4.6~calibre7+1) calibre7; urgency=medium
 
   * Backport to Calibre7

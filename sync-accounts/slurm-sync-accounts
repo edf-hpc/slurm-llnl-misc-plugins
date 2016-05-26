@@ -67,6 +67,10 @@ class Conf(object):
         self.group = None
         self.policy = None
 
+        # opts creation cmd params
+        self.user_add_opts = None
+        self.acct_add_opts = None
+
         # global_account policy specific params
         self.acct_name = None
         self.acct_desc = None
@@ -90,6 +94,26 @@ class Conf(object):
         if not self.policy in available_policies:
             die("invalid policy {policy}" \
                 .format(policy=self.policy))
+
+        try:
+            user_opts = parser.get('main', 'user_add_opts')
+            if user_opts != '':
+                self.user_add_opts = user_opts.split(' ')
+            logger.debug("user_add_opts: %s", str(self.user_add_opts))
+        except ConfigParser.NoOptionError:
+            # This option is not required in configuration file, then
+            # self.user_add_opts stays None if not found.
+            pass
+
+        try:
+            acct_opts = parser.get('main', 'acct_add_opts')
+            if acct_opts != '':
+                self.acct_add_opts = acct_opts.split(' ')
+            logger.debug("acct_add_opts: %s", str(self.acct_add_opts))
+        except ConfigParser.NoOptionError:
+            # This option is not required in configuration file, then
+            # self.acct_add_opts stays None if not found.
+            pass
 
         if self.policy_global is True:
             self.acct_name = parser.get('global_account', 'name')
@@ -132,6 +156,8 @@ def create_acct(name, desc):
            "Cluster='{cluster}'".format(cluster=conf.cluster),
            "Description='{desc}'".format(desc=desc),
            "Organization='{org}'".format(org=conf.org) ]
+    if conf.acct_add_opts is not None:
+        cmd.extend(conf.acct_add_opts)
     run_or_die(cmd)
 
 def ensure_acct(name, desc):
@@ -150,6 +176,8 @@ def create_user(name, account):
     logger.info("creating user {user}".format(user=name))
     cmd = [ 'sacctmgr', '-i', 'add', 'user', name,
             "DefaultAccount={acct}".format(acct=account) ]
+    if conf.user_add_opts is not None:
+        cmd.extend(conf.user_add_opts)
     run_or_die(cmd)
 
 def remove_user(name):

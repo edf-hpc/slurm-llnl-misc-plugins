@@ -57,6 +57,29 @@ args = None
 # SlurmDBD.
 IGNORED_SLURM_USERS = [ 'root' ]
 
+class User(object):
+
+    def __init__(self, name, group):
+
+        self.name = name
+        self.group = group
+
+    def __eq__(self, other):
+
+        return self.name == other.name
+
+    def __hash__(self):
+
+        return hash(self.name)
+
+class Account(object):
+
+    def __init__(self, name, desc, group):
+
+        self.name = name
+        self.desc = desc
+        self.group = group
+
 class Conf(object):
     """Runtime configuration class"""
 
@@ -71,9 +94,8 @@ class Conf(object):
         self.user_add_opts = None
         self.acct_add_opts = None
 
-        # global_account policy specific params
-        self.acct_name = None
-        self.acct_desc = None
+        # global_account/multiple_accounts policies specific params
+        self.accounts = []
 
     def parse(self):
         """Parse the configuration file"""
@@ -87,13 +109,39 @@ class Conf(object):
 
         self.cluster = parser.get('main', 'cluster')
         self.org = parser.get('main', 'org')
-        self.group = parser.get('main', 'group')
+
         self.policy = parser.get('main', 'policy')
 
-        available_policies = [ 'global_account', 'user_account' ]
+        available_policies = [ 'global_account',
+                               'multiple_accounts',
+                               'user_account' ]
+
         if not self.policy in available_policies:
             die("invalid policy {policy}" \
                 .format(policy=self.policy))
+
+        if self.policy in [ 'global_account', 'user_account']:
+            self.group = parser.get('main', 'group')
+
+        if self.policy == 'global_account':
+            acct_name = parser.get('global_account', 'name')
+            acct_desc = parser.get('global_account', 'desc')
+            logger.debug("global account %s for group %s",
+                         acct_name, self.group)
+            self.accounts.append(Account(acct_name, acct_desc, self.group))
+
+        if self.policy == 'multiple_accounts':
+            # parse all account/* sections
+            prefix = 'account/'
+            all_sections = parser.sections()
+            for section in parser.sections():
+                if section.startswith(prefix):
+                    acct_name = section[len(prefix):]
+                    desc = parser.get(section, 'desc')
+                    group = parser.get(section, 'group')
+                    logger.debug("account %s for group %s",
+                                 acct_name, group)
+                    self.accounts.append(Account(acct_name, desc, group))
 
         try:
             user_opts = parser.get('main', 'user_add_opts')
@@ -115,14 +163,6 @@ class Conf(object):
             # self.acct_add_opts stays None if not found.
             pass
 
-        if self.policy_global is True:
-            self.acct_name = parser.get('global_account', 'name')
-            self.acct_desc = parser.get('global_account', 'desc')
-
-    @property
-    def policy_global(self):
-       return self.policy == 'global_account'
-
 def die(msg):
 
     logger.critical(msg)
@@ -137,10 +177,32 @@ def run_or_die(cmd):
             die("error while running command: {cmd}: {error}" \
                 .format(cmd=' '.join(cmd), error=str(returncode)))
 
-def get_group_users():
+def get_posix_group_users(group):
 
-    entry = grp.getgrnam(conf.group)
-    return [ user.lower() for user in entry[3] ]
+    logger.debug("searching for users in group %s", group)
+    entry = grp.getgrnam(group)
+    return [ User(user.lower(), group) for user in entry[3] ]
+
+def get_posix_users():
+    """Return a list of Users members of the posix groups set in
+       configuration."""
+
+    if conf.group is not None:
+        return get_posix_group_users(conf.group)
+
+    # merge users of all groups found in conf.accounts
+    users = []
+    for account in conf.accounts:
+        xusers = get_posix_group_users(account.group)
+        users.extend([ xuser for xuser in xusers if xuser not in users ])
+    return users
+
+def find_group_account(group):
+    """Return the account name corresponding to the group in parameter."""
+    for account in conf.accounts:
+        if account.group == group:
+            return account.name
+    raise IndexError("no account found for group %s" % (group))
 
 def check_acct(name):
 
@@ -237,27 +299,30 @@ def main():
     conf = Conf()
     conf.parse()
 
-    if conf.policy_global is True:
-        ensure_acct(conf.acct_name, conf.acct_desc)
+    if conf.policy != 'user_account':
+        for account in conf.accounts:
+            ensure_acct(account.name, account.desc)
 
-    users_group = get_group_users()
+    users_posix = get_posix_users()
     users_slurm = get_slurm_users()
 
-    for user in users_group:
-        if user not in users_slurm:
+    for user in users_posix:
+        if user.name not in users_slurm:
             # create user and eventually account
-            if conf.policy_global is True:
-                create_user(user, conf.acct_name)
-            else:
+            if conf.policy == 'user_account':
                 acct_desc = "user {user} default account".format(user=user)
-                create_acct(user, acct_desc)
-                create_user(user, user)
+                create_acct(user.name, acct_desc)
+                create_user(user.name, user.name)
+            elif conf.policy in ['global_account', 'multiple_accounts']:
+                acct = find_group_account(user.group)
+                create_user(user.name, acct)
 
     for user in users_slurm:
-        if user not in users_group:
+        posix_user_names = [ xuser.name for xuser in users_posix ]
+        if user not in posix_user_names:
             # delete user and eventually account
             remove_user(user)
-            if conf.policy_global is False:
+            if conf.policy == 'user_account':
                 remove_acct(user)
 
 if __name__ == '__main__':

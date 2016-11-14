@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.5.0) calibre9; urgency=medium
+
+  * sync-accounts: support multiple groups
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Mon, 14 Nov 2016 16:14:30 +0100
+
 slurm-llnl-misc-plugins (0.4.7) calibre9; urgency=medium
 
   * sync-account: add opts creation cmd params

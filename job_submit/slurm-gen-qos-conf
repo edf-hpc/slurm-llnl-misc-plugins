@@ -43,28 +43,58 @@ import subprocess
 import sys
 import csv
 
+# list of QOS to ignore for file
+excluded_qos = [ 'dsp-ap-hpcstats' ]
+# list of accounts to ignore
+excluded_accounts = [ 'root' ]
+
+def read_csv_cmd(cmd, fieldnames):
+    output = None
+    try:
+        output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
+    except subprocess.CalledProcessError, e:
+        print("error while executing cmd: %s: %s" % (','.join(cmd), str(e)))
+        sys.exit(1)
+
+    output_lines = output.split('\n')
+    output_lines.pop() # remove last empty line
+
+    return csv.DictReader(output_lines, fieldnames=fieldnames, delimiter='|')
+
+def get_qos_accounts():
+    """For a dict with all QOS except 'normal' as keys and the list of allowed
+       accounts as values."""
+    cmd = [ 'sacctmgr', '--noheader', '--parsable', 'show', 'associations', 'format="account,qos"' ]
+
+    fieldnames = ['account', 'qos']
+    reader = read_csv_cmd(cmd, fieldnames)
+
+    result = {}
+
+    for row in reader:
+        account = row['account']
+        if account in excluded_accounts:
+            continue  # jump to next line
+        qos_list = row['qos'].split(',')
+        for qos in qos_list:
+            if qos not in result:
+                result[qos] = [ account ]
+            elif account not in result[qos]:
+                result[qos].append(account)
+
+    return result
+
 QOS_CONF = "/etc/slurm-llnl/qos.conf"
+
+qos_accounts = get_qos_accounts()
 
 # run sacctmgr to get the list of qos
 cmd = [ 'sacctmgr', '--noheader', '--parsable', 'show', 'qos', 'format="Name,MaxWall,MaxCPUs"' ]
-output = None
-try:
-    output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
-except subprocess.CalledProcessError, e:
-    print("error while executing sacctmgr: %s" % (str(e)))
-    sys.exit(1)
-
-output_lines = output.split('\n')
-output_lines.pop() # remove last empty line
-
 fieldnames = ['name', 'walltime', 'max_cpus']
-qos_reader = csv.DictReader(output_lines, fieldnames=fieldnames, delimiter='|')
+qos_reader = read_csv_cmd(cmd, fieldnames)
 
 # list of all lines to write in conf file
 qos_conf = []
-
-# list of QOS to ignore for file
-excluded = [ 'dsp-ap-hpcstats' ]
 
 for qos_row in qos_reader:
 
@@ -81,15 +111,19 @@ for qos_row in qos_reader:
             print('skipping qos %s since MaxWall and MaxCPUs are missing' \
                   % (name))
             continue
-        if name in excluded:
+        if name in excluded_qos:
             print('skipping qos %s because listed as excluded' \
                   % (name))
             continue
 
-        qos_conf_l = "{name}|{wall}|{cpu}|\n" \
+        accounts = ''
+        if name in qos_accounts:
+            accounts = ','.join(qos_accounts[name])
+        qos_conf_l = "{name}|{wall}|{cpu}|{accounts}\n" \
                            .format(name=name,
                                    wall=wall,
-                                   cpu=cpu)
+                                   cpu=cpu,
+                                   accounts=accounts)
 
     if qos_conf_l: qos_conf.append(qos_conf_l)
 

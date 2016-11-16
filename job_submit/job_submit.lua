@@ -218,7 +218,7 @@ function build_qos_list ()
          qos_list = addToSet(qos_list, qos_partition)
          qos_list[qos_partition] = addToSet(qos_list[qos_partition], qos_maxcpus)
          qos_list[qos_partition][qos_maxcpus] = addToSet(qos_list[qos_partition][qos_maxcpus], qos_duration)
-         qos_list[qos_partition][qos_maxcpus][qos_duration] = qos_name
+         qos_list[qos_partition][qos_maxcpus][qos_duration] = addToSet(qos_list[qos_partition][qos_maxcpus][qos_duration], qos_name)
       end
    end -- for loop
 
@@ -352,6 +352,8 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
          slurm.log_info("slurm_job_submit: qos %s specified by user.", job_desc.qos)
       end
 
+      found_qos_name = nil
+
       -- Find the first QOS in qos_list that matches jobs cpus and
       -- and time limit
       if qos_list ~= nil then
@@ -363,18 +365,23 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
                   for j, maxcpus in ipairs(qos_list[part]) do
                      if considered_min_cpus <= tonumber(maxcpus) and (job_desc.max_nodes == NULL or job_desc.max_nodes <= tonumber(maxcpus) / CORES_PER_NODE) then
 
-                        found_maxtime = 0
                         if qos_list[part][maxcpus] ~= nil then
                            for k, qos_maxtime in ipairs(qos_list[part][maxcpus]) do
                               if job_desc.time_limit <= tonumber(qos_maxtime) then
-                                 found_maxtime = qos_maxtime
-                                 break
+
+                                 for l, qos_name in ipairs(qos_list[part][maxcpus][qos_maxtime]) do
+                                     found_qos_name = qos_name
+                                     -- break loop on qos_names
+                                     break
+                                 end
+                                 if found_qos_name ~= nil then
+                                    -- break loop on qos_maxtime
+                                    break
+                                 end
                               end
                            end
-
-                           if found_maxtime ~= 0 then
-                              job_desc.qos = qos_list[part][maxcpus][found_maxtime]
-                              job_desc.partition = part
+                           if found_qos_name ~= nil then
+                              -- break loop on maxcpus
                               break
                            end
                         end
@@ -383,6 +390,11 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
                end
             end
          end
+      end
+
+      if found_qos_name ~= nil then
+         slurm.log_info("slurm_job_submit: finally setting qos %s", found_qos_name)
+         job_desc.qos = found_qos_name
       end
 
    end

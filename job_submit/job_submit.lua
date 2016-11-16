@@ -37,6 +37,7 @@ QOS_CONF       = "/etc/slurm-llnl/qos.conf"
 QOS_SEP        = "|"         -- separator for sacctmgr command ouput
 QOS_NAME_SEP   = "_"         -- separator for QOS name
 NULL           = 4294967294  -- numeric nil
+INFINITE       = 4294967294  -- max unsigned 32 bits integer value for slurm
 CORES_PER_NODE = 4
 
 ESLURM_INVALID_WCKEY = 2057  -- Cf /usr/include/slurm/slurm_errno.h
@@ -88,17 +89,24 @@ end
 
 --========================================================================--
 
-function split(inputstr, sep)
+function split(str, pat)
    -- Return a table the elements split in a string
-   -- inputstr   : string to be split
-   -- sep       : separator for split the string
-   if sep == nil then -- If no separator, split in word
-      sep = "%s"
+   -- str   : string to be split
+   -- sep   : separator for split the string
+   local t = {}  -- NOTE: use {n = 0} in Lua-5.0
+   local fpat = "(.-)" .. pat
+   local last_end = 1
+   local s, e, cap = str:find(fpat, 1)
+   while s do
+      if s ~= 1 or cap ~= "" then
+         table.insert(t,cap)
+      end
+      last_end = e+1
+      s, e, cap = str:find(fpat, last_end)
    end
-   t={} ; i=1
-   for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
-      t[i] = str
-      i = i + 1
+   if last_end <= #str then
+      cap = str:sub(last_end)
+      table.insert(t, cap)
    end
    return t
 end
@@ -197,6 +205,9 @@ function build_qos_list ()
       qos_name=t[1]
       qos_duration=to_minute(t[2])
       qos_maxcpus=t[3]
+      if qos_maxcpus == nil or qos_maxcpus == '' then
+         qos_maxcpus = tostring(INFINITE)
+      end
 
       if qos_duration ~= nil and qos_maxcpus ~=nil
       then

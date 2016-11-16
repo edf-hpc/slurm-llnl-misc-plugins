@@ -299,8 +299,10 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
    -- QOS set by user. In this case, the script simply sets the partition
    -- accordingly.
    if job_desc.qos ~= nil then
-      local t = split(job_desc.qos, QOS_NAME_SEP)
 
+      slurm.log_info("slurm_job_submit: qos %s specified by user.", job_desc.qos)
+
+      local t = split(job_desc.qos, QOS_NAME_SEP)
       partition = t[1]
 
       if job_desc.partition == nil then
@@ -346,10 +348,6 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
                break
             end
          end
-      end
-
-      if job_desc.qos ~= nil then
-         slurm.log_info("slurm_job_submit: qos %s specified by user.", job_desc.qos)
       end
 
       found_qos_name = nil

@@ -51,39 +51,36 @@ WCKEYS_DEL_TMP_FILE=$(tempfile -d ${TMP_MNT_POINT})
 ### Block 1 ###
 ### Generate wckeys file ####
 
-if [ -f "${PAREO_FILE}" ]
-then
-  PAREO_LIST=$(awk -F';' '{print tolower($1)}' ${PAREO_FILE} | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u)
-else
-  print_error 1 "File not found: ${PAREO_FILE}"
-fi
-
-if [ -f "${CODES_FILE}" ]
-then
-  CODES_LIST=$(iconv -f 437 -t ascii//TRANSLIT ${CODES_FILE} | \
-  awk -F';' '{gsub (/[ )]$/, "", $1 ); print tolower($1)}' | \
-  tr '[:blank:]' '_' | sed -r -e 's/[_]+/_/g' -e 's/^[_]+//g' -e 's/[_]+$//g' | sort -u)
-else
-  print_error 1 "File not found: ${CODES_FILE}"
-fi
-
-if [ -f "${SLURMDB_FILE}" ]
-then
-  source ${SLURMDB_FILE}
-else
-  print_error 1 "File not found: ${CODES_FILE}"
-fi
-
-
-
-for project in ${PAREO_LIST}
+CODES_PROJETS_LIST=""
+CODES_METIERS_LIST=""
+nb=0
+for i in $PAREO_FILE
 do
-  for application in ${CODES_LIST}
-  do
-    echo "${project}:${application}"
-  done >> ${WCKEYS_TMP_FILE}
+  if [ -f "${i}" ]
+  then
+    ((nb++))
+    CODES_PROJETS_LIST=$(awk -F';' '{print tolower($1)}' ${i} | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u)
+    CODES_METIERS_FILE_CURRENT=$(echo $CODES_FILE | cut -f$nb -d" ")
+      if [ -f "${CODES_METIERS_FILE_CURRENT}" ]
+      then
+        CODES_METIERS_LIST=$(iconv -f 437 -t ascii//TRANSLIT ${CODES_METIERS_FILE_CURRENT} | \
+        awk -F';' '{gsub (/[ )]$/, "", $1 ); print tolower($1)}' | \
+        tr '[:blank:]' '_' | sed -r -e 's/[_]+/_/g' -e 's/^[_]+//g' -e 's/[_]+$//g' | sort -u)
+
+        for project in ${CODES_METIERS_LIST}
+        do
+          for application in ${CODES_PROJETS_LIST}
+          do
+            echo "${project}:${application}"
+          done >> ${WCKEYS_TMP_FILE}
+        done
+      else
+        print_error 1 "File not found: $CODES_METIERS_FILE_CURRENT"
+      fi
+  else
+    print_error 1 "File not found: ${i}"
+  fi
 done
-sort -u ${WCKEYS_TMP_FILE} -o ${WCKEYS_FILE}
 
 ### Block 2 ###
 ### Generate add and delete files ###

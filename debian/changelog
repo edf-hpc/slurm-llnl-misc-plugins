@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.5.2) calibre9; urgency=medium
+
+  * slurm_wckeys_setup.sh: Manage multiple projects and applications CSV
+
+ -- Camille Mange <camille-externe.mange@edf.fr>  Thu, 17 Nov 2016 15:39:31 +0200
+
 slurm-llnl-misc-plugins (0.5.1) calibre9; urgency=medium
 
   * gen qos.conf script now extract accounts

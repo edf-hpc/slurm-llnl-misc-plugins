@@ -46,41 +46,45 @@ WCKEYS_INDB_TMP_FILE=$(tempfile -d ${TMP_MNT_POINT})
 WCKEYS_ADD_TMP_FILE=$(tempfile -d ${TMP_MNT_POINT})
 WCKEYS_DEL_TMP_FILE=$(tempfile -d ${TMP_MNT_POINT})
 
-
-
 ### Block 1 ###
 ### Generate wckeys file ####
 
-CODES_PROJETS_LIST=""
-CODES_METIERS_LIST=""
 nb=0
-for i in $PAREO_FILE
+for CODES_PROJETS_FILE_CURRENT in ${PAREO_FILE}
 do
-  if [ -f "${i}" ]
+  if [ -f "${CODES_PROJETS_FILE_CURRENT}" ]
   then
     ((nb++))
-    CODES_PROJETS_LIST=$(awk -F';' '{print tolower($1)}' ${i} | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u)
-    CODES_METIERS_FILE_CURRENT=$(echo $CODES_FILE | cut -f$nb -d" ")
+    CODES_PROJETS_LIST=$(awk -F';' '{print tolower($1)}' ${CODES_PROJETS_FILE_CURRENT} | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u)
+    CODES_METIERS_FILE_CURRENT=$(echo ${CODES_FILE} | cut -f${nb} -d" ")
       if [ -f "${CODES_METIERS_FILE_CURRENT}" ]
       then
         CODES_METIERS_LIST=$(iconv -f 437 -t ascii//TRANSLIT ${CODES_METIERS_FILE_CURRENT} | \
         awk -F';' '{gsub (/[ )]$/, "", $1 ); print tolower($1)}' | \
         tr '[:blank:]' '_' | sed -r -e 's/[_]+/_/g' -e 's/^[_]+//g' -e 's/[_]+$//g' | sort -u)
 
-        for project in ${CODES_METIERS_LIST}
+        for project in ${CODES_PROJETS_LIST}
         do
-          for application in ${CODES_PROJETS_LIST}
+          for application in ${CODES_METIERS_LIST}
           do
             echo "${project}:${application}"
           done >> ${WCKEYS_TMP_FILE}
         done
       else
-        print_error 1 "File not found: $CODES_METIERS_FILE_CURRENT"
+        print_error 1 "File not found: ${CODES_METIERS_FILE_CURRENT}"
       fi
   else
-    print_error 1 "File not found: ${i}"
+    print_error 1 "File not found: ${CODES_PROJETS_FILE_CURRENT}"
   fi
 done
+sort -u ${WCKEYS_TMP_FILE} -o ${WCKEYS_FILE}
+
+if [ -f "${SLURMDB_FILE}" ]
+then
+  source ${SLURMDB_FILE}
+else
+  print_error 1 "File not found: ${CODES_FILE}"
+fi
 
 ### Block 2 ###
 ### Generate add and delete files ###
@@ -129,3 +133,4 @@ done
 ### Clean system ###
 umount ${TMP_MNT_POINT}
 rm -rf  ${TMP_MNT_POINT}
+

@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.6.0) calibre9; urgency=low
+
+  * Introduce pwmgt utility
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Wed, 21 Dec 2016 14:31:12 +0100
+
 slurm-llnl-misc-plugins (0.5.3) calibre9; urgency=medium
 
   * slurm_wckeys_setup.sh: Fix bug wckeys (applications and projects order)

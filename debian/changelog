@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.6.0~calibre7+1) calibre7; urgency=medium
+
+  * Backport to calibre7.
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Wed, 21 Dec 2016 14:23:26 +0100
+
 slurm-llnl-misc-plugins (0.6.0) calibre9; urgency=low
 
   * Introduce pwmgt utility

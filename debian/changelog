@@ -1,3 +1,37 @@
+slurm-llnl-misc-plugins (0.6.0) calibre9; urgency=low
+
+  * Introduce pwmgt utility
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Wed, 21 Dec 2016 14:31:12 +0100
+
+slurm-llnl-misc-plugins (0.5.3) calibre9; urgency=medium
+
+  * slurm_wckeys_setup.sh: Fix bug wckeys (applications and projects order)
+
+ -- Camille Mange <camille-externe.mange@edf.fr>  Thu, 18 Nov 2016 14:13:31 +0200
+
+slurm-llnl-misc-plugins (0.5.2) calibre9; urgency=medium
+
+  * slurm_wckeys_setup.sh: Manage multiple projects and applications CSV
+
+ -- Camille Mange <camille-externe.mange@edf.fr>  Thu, 17 Nov 2016 15:39:31 +0200
+
+slurm-llnl-misc-plugins (0.5.1) calibre9; urgency=medium
+
+  * gen qos.conf script now extract accounts
+  * job_submit.lua: handle empty maxcpus in CSV
+  * job_submit.lua: manage multiple qos same settings
+  * job_submit.lua: remove useless code branch
+  * job_submit.lua: check allowed accounts from CSV
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Wed, 16 Nov 2016 11:18:44 +0100
+
+slurm-llnl-misc-plugins (0.5.0) calibre9; urgency=medium
+
+  * sync-accounts: support multiple groups
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Mon, 14 Nov 2016 16:14:30 +0100
+
 slurm-llnl-misc-plugins (0.4.7~calibre7+1) calibre7; urgency=medium
 
   * Backport to Calibre7.

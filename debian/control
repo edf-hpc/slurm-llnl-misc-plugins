@@ -70,3 +70,24 @@ Depends:
 Description: Script to keep accounts in sync in SlurmDBD
  This package provides a Python script and a cronjob to sync cluster group
  members with users and accounts in SlurmDBD.
+
+Package: slurm-pwmgt-nodes
+Architecture: all
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+ python,
+ clustershell (>= 1.7)
+Description: Utility for saving nodes energy with Slurm
+ This package provides a Python script that to let Slurm stop/start nodes
+ and save energy of unallocated compute nodes.
+
+Package: slurm-pwmgt-stop-wrapper
+Architecture: all
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+ python
+Description: Wrapper to stop node by SSH
+ This package provides a simple Python script utility to poweroff or suspend
+ a compute node through SSH with a dedicated public key.

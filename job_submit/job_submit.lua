@@ -36,8 +36,11 @@
 QOS_CONF       = "/etc/slurm-llnl/qos.conf"
 QOS_SEP        = "|"         -- separator for sacctmgr command ouput
 QOS_NAME_SEP   = "_"         -- separator for QOS name
+ACCOUNTS_SEP   = ","         -- separator for accounts
 NULL           = 4294967294  -- numeric nil
+INFINITE       = 4294967294  -- max unsigned 32 bits integer value for slurm
 CORES_PER_NODE = 4
+ENFORCE_ACCOUNT = false      -- check qos/account compatibility, default to no
 
 ESLURM_INVALID_WCKEY = 2057  -- Cf /usr/include/slurm/slurm_errno.h
 WCKEY_CONF_FILE = "/etc/slurm-llnl/wckeysctl/wckeys"
@@ -88,19 +91,51 @@ end
 
 --========================================================================--
 
-function split(inputstr, sep)
-   -- Return a table the elements split in a string
-   -- inputstr   : string to be split
-   -- sep       : separator for split the string
-   if sep == nil then -- If no separator, split in word
-      sep = "%s"
+function extendTable(t1, t2)
+   -- Extend table t1 with values of t2
+   for k,v in ipairs(t2) do
+      table.insert(t1, v)
    end
-   t={} ; i=1
-   for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
-      t[i] = str
-      i = i + 1
+   return t1
+end
+
+--========================================================================--
+
+function split(str, pat)
+   -- Return a table the elements split in a string
+   -- str   : string to be split
+   -- sep   : separator for split the string
+   local t = {}  -- NOTE: use {n = 0} in Lua-5.0
+   local fpat = "(.-)" .. pat
+   local last_end = 1
+   local s, e, cap = str:find(fpat, 1)
+   while s do
+      if s ~= 1 or cap ~= "" then
+         table.insert(t,cap)
+      end
+      last_end = e+1
+      s, e, cap = str:find(fpat, last_end)
+   end
+   if last_end <= #str then
+      cap = str:sub(last_end)
+      table.insert(t, cap)
    end
    return t
+end
+
+--========================================================================--
+
+function has_value (tab, val)
+   -- Returns true if tab has val, false otherwise.
+   -- tab: search table
+   -- val: value to look for
+   for index, value in ipairs (tab) do
+      if value == val then
+         return true
+      end
+   end
+
+   return false
 end
 
 --========================================================================--
@@ -173,7 +208,9 @@ end
 function build_qos_list ()
    -- Read QOS configuration from sacctmgr command and create a multi-dimension table
    -- qos_list[qos_name][qos_maxcpus][qos_duration] = qos_name
+   -- qos_accounts[qos_name] = { account1, account2, etc }
    local qos_list = {}
+   local qos_accounts = {}
    local qos_rec = {}
    local qos_name
    local qos_duration
@@ -197,6 +234,12 @@ function build_qos_list ()
       qos_name=t[1]
       qos_duration=to_minute(t[2])
       qos_maxcpus=t[3]
+      if qos_maxcpus == nil or qos_maxcpus == '' then
+         qos_maxcpus = tostring(INFINITE)
+      end
+      if ENFORCE_ACCOUNT then
+         accounts = split(t[4], ACCOUNTS_SEP)
+      end
 
       if qos_duration ~= nil and qos_maxcpus ~=nil
       then
@@ -207,7 +250,15 @@ function build_qos_list ()
          qos_list = addToSet(qos_list, qos_partition)
          qos_list[qos_partition] = addToSet(qos_list[qos_partition], qos_maxcpus)
          qos_list[qos_partition][qos_maxcpus] = addToSet(qos_list[qos_partition][qos_maxcpus], qos_duration)
-         qos_list[qos_partition][qos_maxcpus][qos_duration] = qos_name
+         qos_list[qos_partition][qos_maxcpus][qos_duration] = addToSet(qos_list[qos_partition][qos_maxcpus][qos_duration], qos_name)
+
+         if ENFORCE_ACCOUNT then
+            if qos_accounts[qos_name] == nil then
+               qos_accounts[qos_name] = accounts
+            else
+               qos_accounts[qos_name] = extendTable(qos_accounts[qos_name], accounts)
+            end
+         end
       end
    end -- for loop
 
@@ -226,7 +277,7 @@ function build_qos_list ()
       end
    end
    io.close(qos_rec)
-   return qos_list
+   return qos_list, qos_accounts
 end
 
 function track_wckey (job_desc, part_list, submit_uid)
@@ -266,6 +317,7 @@ function track_wckey (job_desc, part_list, submit_uid)
    end
 end
 
+
 --########################################################################--
 --
 --  SLURM job_submit/lua interface:
@@ -279,7 +331,7 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
    end
 
    local username
-   local qos_list = build_qos_list()
+   local qos_list, qos_accounts = build_qos_list()
    local maxtime
    local maxcpus
    local cmd =  "getent passwd " .. submit_uid .. "| awk -F':' '{print tolower($1)}'"
@@ -337,9 +389,18 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
          end
       end
 
-      if job_desc.qos ~= nil then
-         slurm.log_info("slurm_job_submit: qos %s specified by user.", job_desc.qos)
+      -- if ENFORCE_ACCOUNT is true and job account is not specified, set its
+      -- value to user's default account for later processing.
+      if ENFORCE_ACCOUNT then
+          if job_desc.account == nil then
+             slurm.log_info("slurm_job_submit: no account specified by user %s, using default account %s.", username, job_desc.default_account)
+             job_desc.account = job_desc.default_account
+          else
+             slurm.log_info("slurm_job_submit: account %s specified by user %s.", job_desc.account, username)
+          end
       end
+
+      found_qos_name = nil
 
       -- Find the first QOS in qos_list that matches jobs cpus and
       -- and time limit
@@ -352,18 +413,27 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
                   for j, maxcpus in ipairs(qos_list[part]) do
                      if considered_min_cpus <= tonumber(maxcpus) and (job_desc.max_nodes == NULL or job_desc.max_nodes <= tonumber(maxcpus) / CORES_PER_NODE) then
 
-                        found_maxtime = 0
                         if qos_list[part][maxcpus] ~= nil then
                            for k, qos_maxtime in ipairs(qos_list[part][maxcpus]) do
                               if job_desc.time_limit <= tonumber(qos_maxtime) then
-                                 found_maxtime = qos_maxtime
-                                 break
+
+                                 for l, qos_name in ipairs(qos_list[part][maxcpus][qos_maxtime]) do
+                                     -- check the job account is allowed in qos accounts if ENFORCE_ACCOUNT is true
+                                     if not ENFORCE_ACCOUNT or has_value(qos_accounts[qos_name], job_desc.account) then
+                                        found_qos_name = qos_name
+                                        -- break loop on qos_names
+                                        break
+                                     end
+                                 end
+                                 if found_qos_name ~= nil then
+                                    -- break loop on qos_maxtime
+                                    break
+                                 end
                               end
                            end
 
-                           if found_maxtime ~= 0 then
-                              job_desc.qos = qos_list[part][maxcpus][found_maxtime]
-                              job_desc.partition = part
+                           if found_qos_name ~= nil then
+                              -- break loop on maxcpus
                               break
                            end
                         end
@@ -374,11 +444,17 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
          end
       end
 
+      if found_qos_name ~= nil then
+         slurm.log_info("slurm_job_submit: finally setting qos %s", found_qos_name)
+         job_desc.qos = found_qos_name
+      end
+
    end
 
-   slurm.log_info("slurm_job_submit: job from user:%s/%u minutes:%u cores:%u-%u nodes:%u-%u shared:%u partition:%s QOS:%s",
+   slurm.log_info("slurm_job_submit: job from user:%s/%u account:%s minutes:%u cores:%u-%u nodes:%u-%u shared:%u partition:%s QOS:%s",
                   username,
                   submit_uid,
+                  showstring(job_desc.account),
                   job_desc.time_limit,
                   job_desc.min_cpus,
                   job_desc.max_cpus,

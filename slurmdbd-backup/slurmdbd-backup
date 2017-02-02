@@ -1,0 +1,91 @@
+#!/bin/bash
+##########################################################################
+#  Script used to dump the SlurmDBD MySQL database locally               #
+#                                                                        #
+#  The script reads variables from /etc/slurm-llnl/slurmdbd-backup.vars  #
+#                                                                        #
+#  Copyright (C) 2014-2017 EDF S.A.                                      #
+#  Contact: CCN-HPC <dsp-cspit-ccn-hpc@edf.fr>                           #
+#                                                                        #
+#  This program is free software; you can redistribute in and/or         #
+#  modify it under the terms of the GNU General Public License,          #
+#  version 2, as published by the Free Software Foundation.              #
+#  This program is distributed in the hope that it will be useful,       #
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of        #
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         #
+#  GNU General Public License for more details.                          #
+##########################################################################
+
+export LC_ALL=C
+export LANG=C
+
+ACCTDB=slurm_acct_db
+BKDIR=/var/backups/slurmdbd/database
+DBMAINCONF=/etc/mysql/debian.cnf
+KEEP_OLD=true
+
+config_file="${1:-/etc/slurm-llnl/slurmdbd-backup.vars}"
+
+# Override the default variables values
+source "${config_file}"
+
+print_error () {
+  case ${1} in
+    1)
+      message="${2}: File not found, cannot proceed."
+      ;;
+    2)
+      message="An error occurred while executing mysqldump."
+      ;;
+  esac
+  echo -e "\e[00;31m ${message} \e[00m"
+  logger -p ${0}.info ${message}
+  exit ${1}
+}
+
+# Dump current backup
+if [ -d ${BKDIR} ]
+then
+  TODAY=$(date +%Y_%m_%d)
+  NOW=$(date +%Hh%M)
+  [ -d ${BKDIR}/${TODAY} ] || mkdir ${BKDIR}/${TODAY}
+  ln -Tfs ${BKDIR}/${TODAY} ${BKDIR}/last
+  mysqldump --defaults-extra-file=${DBMAINCONF} -F -l --databases ${SLURMDB} ${ACCTDB} | gzip > ${BKDIR}/${TODAY}/slurmdbd_$(hostname)_${TODAY}_${NOW}.sql.gz || print_error 2
+else
+  print_error 1 ${BKDIR}
+fi
+
+# Clean backups older than the previous month
+cur_month=$(date +%-m)
+cur_month_padded=$(printf "%02d" ${cur_month} )
+cur_month_year=$(date +%Y)
+if [[ "${cur_month}" == "1" ]]
+then
+  prev_month_padded="12"
+  prev_month_year="$(( ${curt_month_year} - 1 ))"
+else
+  prev_month_padded="$( printf "%02d" $(( ${cur_month} - 1 )))"
+  prev_month_year="${cur_month_year}"
+fi
+
+
+find ${BKDIR} -type f \
+  -path "${BKDIR}/????_??_??/slurmdbd_$(hostname)_*.sql.gz" \
+  -not -path "${BKDIR}/${cur_month_year}_${cur_month_padded}_??/slurmdbd_$(hostname)_${cur_month_year}_${cur_month_padded}_*.sql.gz" \
+  -not -path "${BKDIR}/${prev_month_year}_${prev_month_padded}_??/slurmdbd_$(hostname)_${prev_month_year}_${prev_month_padded}_*.sql.gz" | while read file_path
+do
+  echo -n "Old Backup: ${file_path} "
+  if [[ "x${KEEP_OLD}" == "xfalse" ]]
+  then
+    echo "[Removing]"
+    rm "${file_path}"
+  else
+    echo "[Keeping]"
+  fi
+  file_dir="$(dirname ${file_path})"
+  if [[ "x$(ls "${file_dir}" | wc -l)" == "x0" ]]
+  then
+    echo "${file_dir} is empty, removing..."
+    rmdir ${file_dir}
+  fi
+done

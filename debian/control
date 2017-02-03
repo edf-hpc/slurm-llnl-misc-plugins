@@ -6,6 +6,15 @@ Build-Depends:
 Standards-Version: 3.9.5
 Section: doc
 
+Package: slurmdbd-backup
+Architecture: all
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+ mariadb-client | virtual-mysql-client
+Description: Tool to backup the SlurmDBD database
+ The database is dumped in a local directory with the mysqldump tool.
+
 Package: slurm-llnl-generic-scripts-plugin
 Architecture: all
 Depends:

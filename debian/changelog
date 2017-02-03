@@ -1,3 +1,10 @@
+slurm-llnl-misc-plugins (0.7.0) calibre9; urgency=medium
+
+  * slurmdbd-backup: Add SlurmDBD backup script
+  * slurmdbd-backup: Add packaging
+
+ -- Thomas HAMEL <thomas-externe.hamel@edf.fr>  Fri, 03 Feb 2017 09:33:27 +0000
+
 slurm-llnl-misc-plugins (0.6.0) calibre9; urgency=low
 
   * Introduce pwmgt utility

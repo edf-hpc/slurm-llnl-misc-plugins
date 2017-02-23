@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.7.1) UNRELEASED; urgency=medium
+
+  * job_submit: os.execute compatible with lua 5.1 and 5.2
+
+ -- Thomas Hamel <thomas-externe.hamel@edf.fr>  Thu, 23 Feb 2017 17:08:15 +0000
+
 slurm-llnl-misc-plugins (0.7.0) calibre9; urgency=medium
 
   * slurmdbd-backup: Add SlurmDBD backup script

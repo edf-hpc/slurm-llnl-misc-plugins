@@ -1,4 +1,10 @@
-slurm-llnl-misc-plugins (0.7.1) UNRELEASED; urgency=medium
+slurm-llnl-misc-plugins (0.7.2) calibre9; urgency=medium
+
+  * packaging: fix distribution
+
+ -- Thomas Hamel <thomas-externe.hamel@edf.fr>  Thu, 23 Feb 2017 18:42:00 +0000
+
+slurm-llnl-misc-plugins (0.7.1) calibre9; urgency=medium
 
   * job_submit: os.execute compatible with lua 5.1 and 5.2
 

@@ -154,6 +154,22 @@ end
 
 --========================================================================--
 
+function test_execution(cmd)
+   -- Return true if the command returns successfully
+   -- cmd   : command to be executed
+   local result = os.execute(cmd)
+   local final_result = false
+   if _VERSION == 'Lua 5.2'
+   then
+      final_result = result
+   else
+      final_result = ( result == 0 )
+   end
+   return final_result
+end
+
+--========================================================================--
+
 function to_minute(inputstr)
    -- convert SLURM time format in minute :
    -- inpustr : string should looks like :
@@ -291,7 +307,7 @@ function track_wckey (job_desc, part_list, submit_uid)
       if job_desc.wckey == nil then
          if user_exception ~= nil then
             local exep_check = "grep -i -q -x " .. username .. " " .. WCKEY_USER_EXCEPTION_FILE
-            if os.execute(exep_check) == 0 then
+            if test_execution(exep_check) then
                slurm.log_info("slurm_wckey_exeption: job from user:%s/%u without wckey.", username, submit_uid)
                return 0
             end
@@ -304,7 +320,8 @@ function track_wckey (job_desc, part_list, submit_uid)
             job_desc.wckey = string.lower(job_desc.wckey)
          end
          local wc_check = "grep -q -x " .. job_desc.wckey .. " " .. WCKEY_CONF_FILE
-         if os.execute(wc_check) == 0 then
+         slurm.log_info("slurm_job_modify: job from user:%s/%u searching wckey %s", username, submit_uid, wc_check)
+         if test_execution(wc_check) then
             slurm.log_info("slurm_job_modify: job from user:%s/%u with wckey=%s.", username, submit_uid, showstring(job_desc.wckey))
             return 0
          else

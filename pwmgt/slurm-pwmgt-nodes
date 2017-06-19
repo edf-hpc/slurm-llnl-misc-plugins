@@ -180,7 +180,9 @@ def stop_nodes(hostlist):
 
     task = task_self()
     task.set_info('ssh_options',
-                  "-o UserKnownHostsFile=/dev/null -l root -i %s" \
+                  "-o StrictHostKeyChecking=no " \
+                  "-o UserKnownHostsFile=/dev/null " \
+                  "-l root -i %s" \
                     % (conf.ssh_identity))
     worker = WorkerSsh(hostlist,
                        handler=SlurmPwmgtHandler(),

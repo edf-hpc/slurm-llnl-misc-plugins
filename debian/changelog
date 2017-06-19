@@ -1,3 +1,12 @@
+slurm-llnl-misc-plugins (0.7.3) calibre9; urgency=medium
+
+  * pwmgt: daemonize stop wrapper cmd
+  * pkg: pwmgt stop wrapper now depends on daemon lib
+  * pwmgt: fix debug formatting string
+  * pwmgt: disable SSH strict host key checking
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Mon, 19 Jun 2017 16:17:15 +0200
+
 slurm-llnl-misc-plugins (0.7.2) calibre9; urgency=medium
 
   * packaging: fix distribution

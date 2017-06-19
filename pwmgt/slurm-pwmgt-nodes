@@ -96,7 +96,7 @@ class SlurmPwmgtHandler(EventHandler):
             logger.debug("exit code 0 on node %s", worker.current_node)
 
     def ev_timeout(self, worker):
-        logger.error("timeout on nodes: %",
+        logger.error("timeout on nodes: %s",
                      str(NodeSet.fromlist(worker.iter_keys_timeout())))
 
     def ev_close(self, worker):

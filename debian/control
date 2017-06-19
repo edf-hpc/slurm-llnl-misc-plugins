@@ -96,7 +96,8 @@ Architecture: all
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
- python
+ python,
+ python-daemon
 Description: Wrapper to stop node by SSH
  This package provides a simple Python script utility to poweroff or suspend
  a compute node through SSH with a dedicated public key.

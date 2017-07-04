@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.7.4) calibre9; urgency=medium
+
+  * sync-accounts: handle multiple src posix groups
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Tue, 04 Jul 2017 11:25:48 +0200
+
 slurm-llnl-misc-plugins (0.7.3) calibre9; urgency=medium
 
   * pwmgt: daemonize stop wrapper cmd

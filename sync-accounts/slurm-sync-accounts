@@ -53,7 +53,7 @@ logger = None
 args = None
 
 # This list specifies list of users that should normally be present in SlurmDBD
-# but not necessarily in users group, and therefore should not be removed from
+# but not necessarily in users groups, and therefore should not be removed from
 # SlurmDBD.
 IGNORED_SLURM_USERS = [ 'root' ]
 
@@ -74,11 +74,11 @@ class User(object):
 
 class Account(object):
 
-    def __init__(self, name, desc, group):
+    def __init__(self, name, desc, groups):
 
         self.name = name
         self.desc = desc
-        self.group = group
+        self.groups = groups  # the posix groups associated to this account
 
 class Conf(object):
     """Runtime configuration class"""
@@ -87,7 +87,7 @@ class Conf(object):
         self.filename = filename
         self.org = None
         self.cluster = None
-        self.group = None
+        self.groups = []
         self.policy = None
 
         # opts creation cmd params
@@ -121,14 +121,22 @@ class Conf(object):
                 .format(policy=self.policy))
 
         if self.policy in [ 'global_account', 'user_account']:
-            self.group = parser.get('main', 'group')
+
+            # check deprecated group parameter
+            if not parser.has_option('main', 'groups') and \
+               parser.has_option('main','group'):
+                logger.error('main/group parameter is deprecated, '
+                             'use main/groups instead')
+                self.groups = [ parser.get('main', 'group') ]
+            else:
+                self.groups = parser.get('main', 'groups').split(',')
 
         if self.policy == 'global_account':
             acct_name = parser.get('global_account', 'name')
             acct_desc = parser.get('global_account', 'desc')
-            logger.debug("global account %s for group %s",
-                         acct_name, self.group)
-            self.accounts.append(Account(acct_name, acct_desc, self.group))
+            logger.debug("global account %s for groups %s",
+                         acct_name, str(self.groups))
+            self.accounts.append(Account(acct_name, acct_desc, self.groups))
 
         if self.policy == 'multiple_accounts':
             # parse all account/* sections
@@ -141,7 +149,7 @@ class Conf(object):
                     group = parser.get(section, 'group')
                     logger.debug("account %s for group %s",
                                  acct_name, group)
-                    self.accounts.append(Account(acct_name, desc, group))
+                    self.accounts.append(Account(acct_name, desc, [ group ]))
 
         try:
             user_opts = parser.get('main', 'user_add_opts')
@@ -183,24 +191,33 @@ def get_posix_group_users(group):
     entry = grp.getgrnam(group)
     return [ User(user.lower(), group) for user in entry[3] ]
 
+def get_posix_groups_users(groups):
+
+    users = []
+
+    for group in groups:
+        users.extend(get_posix_group_users(group))
+
+    return list(set(users))  # remove duplicates
+
 def get_posix_users():
     """Return a list of Users members of the posix groups set in
        configuration."""
 
-    if conf.group is not None:
-        return get_posix_group_users(conf.group)
+    if len(conf.groups):
+        return get_posix_groups_users(conf.groups)
 
     # merge users of all groups found in conf.accounts
     users = []
     for account in conf.accounts:
-        xusers = get_posix_group_users(account.group)
+        xusers = get_posix_groups_users(account.groups)
         users.extend([ xuser for xuser in xusers if xuser not in users ])
     return users
 
 def find_group_account(group):
     """Return the account name corresponding to the group in parameter."""
     for account in conf.accounts:
-        if account.group == group:
+        if group in account.groups:
             return account.name
     raise IndexError("no account found for group %s" % (group))
 

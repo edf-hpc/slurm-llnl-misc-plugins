@@ -327,7 +327,7 @@ def main():
         if user.name not in users_slurm:
             # create user and eventually account
             if conf.policy == 'user_account':
-                acct_desc = "user {user} default account".format(user=user)
+                acct_desc = "user {user} default account".format(user=user.name)
                 create_acct(user.name, acct_desc)
                 create_user(user.name, user.name)
             elif conf.policy in ['global_account', 'multiple_accounts']:

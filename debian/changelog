@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.7.6) calibre9; urgency=medium
+
+  * job_submit: split optimization
+
+ -- Thomas HAMEL <thomas-externe.hamel@edf.fr>  Thu, 03 Aug 2017 16:55:54 +0200
+
 slurm-llnl-misc-plugins (0.7.5) calibre9; urgency=medium
 
   * sync-accounts: fix user account description string

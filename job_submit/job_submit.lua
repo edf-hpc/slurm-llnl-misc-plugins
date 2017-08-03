@@ -7,7 +7,7 @@
 --
 -- Name of QOSes has to match this format: <partition>_<max_cores>_<walltime>.
 --
--- Copyright: (C) 2013-2015 EDF SA
+-- Copyright: (C) 2013-2017 EDF SA
 --
 -- Contact:
 --
@@ -106,19 +106,29 @@ function split(str, pat)
    -- str   : string to be split
    -- sep   : separator for split the string
    local t = {}  -- NOTE: use {n = 0} in Lua-5.0
-   local fpat = "(.-)" .. pat
    local last_end = 1
-   local s, e, cap = str:find(fpat, 1)
+   if pat == '' then
+       table.insert(t, str)
+       return t
+   end
+   local s, e = str:find(pat, last_end)
    while s do
-      if s ~= 1 or cap ~= "" then
-         table.insert(t,cap)
+      if s ~= last_end then
+         cap = str:sub(last_end, s - 1)
+         table.insert(t, cap)
+      else
+         table.insert(t, '')
       end
       last_end = e+1
-      s, e, cap = str:find(fpat, last_end)
+
+      s, e = str:find(pat, last_end)
    end
    if last_end <= #str then
       cap = str:sub(last_end)
       table.insert(t, cap)
+   else
+      -- str ends with pat
+      table.insert(t, '')
    end
    return t
 end

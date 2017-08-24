@@ -55,6 +55,7 @@ class Conf(object):
         self.db_hosts = []
         self.passwords = {}
         self.controllers = []
+        self.importers = []
         self.admins = []
         self.parser = None
 
@@ -79,6 +80,10 @@ class Conf(object):
 
         # hosts
         self.controllers = self.parser.get('hosts', 'controllers').split(',')
+        if self.parser.has_option('hosts', 'importers'):
+            self.importers = self.parser.get('hosts', 'importers').split(',')
+        else:
+            self.importers = [ '%' ]
         self.admins = self.parser.get('hosts', 'admins').split(',')
 
 class Grant(object):
@@ -159,13 +164,16 @@ def missing_grants(conf, db_cur):
 
     # build list of all needed grants
     grants = []
-    all_hosts = Set(conf.db_hosts + conf.controllers + conf.admins + ['localhost'])
+    all_rw_hosts = Set(conf.db_hosts + conf.controllers + conf.admins + ['localhost'])
     for db in DATABASES:
-        for host in all_hosts:
+        for host in all_rw_hosts:
             grants.append(Grant('all', db, '*', 'slurm', host,
                           conf.passwords['slurm']))
 
-    grants.append(Grant('select', 'slurm_acct_db', '*', 'slurmro', '%', conf.passwords['slurmro']))
+    all_ro_hosts = Set(conf.importers)
+    for host in all_ro_hosts:
+        grants.append(Grant('select', 'slurm_acct_db', '*', 'slurmro', host,
+                      conf.passwords['slurmro']))
 
     # then check against existing grants
     missing_grants = []

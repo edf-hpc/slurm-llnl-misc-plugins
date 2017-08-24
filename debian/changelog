@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.7.7) calibre9; urgency=medium
+
+  * mysql-setup: add feature to restrict slurmro hosts
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Thu, 24 Aug 2017 12:08:43 +0200
+
 slurm-llnl-misc-plugins (0.7.6) calibre9; urgency=medium
 
   * job_submit: split optimization

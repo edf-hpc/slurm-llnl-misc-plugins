@@ -43,7 +43,7 @@ import ConfigParser
 from sets import Set
 
 # hardcoded conf
-DATABASES = ['slurm', 'slurm_acct_db']
+DATABASES = ['slurm_acct_db']
 
 class Conf(object):
     """Runtime configuration class"""

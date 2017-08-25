@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 ##############################################################################
-#  Copyright (C) 2014 EDF SA                                                 #
+#  Copyright (C) 2014-2017 EDF SA                                            #
 #                                                                            #
 #  Author: Rémi Palancher <remi-externe.palancher@edf.fr>                    #
 #                                                                            #
@@ -86,47 +86,140 @@ class Conf(object):
             self.importers = [ '%' ]
         self.admins = self.parser.get('hosts', 'admins').split(',')
 
-class Grant(object):
+
+class DBMSDB(object):
+
+    def __init__(self, name):
+
+       self.name = name
+
+    def sql_check(self):
+
+        return "SHOW databases LIKE '{name}'".format(name=self.name)
+
+    def sql_create(self):
+
+        return "CREATE DATABASE {name}".format(name=self.name)
+
+    def __str__(self):
+        return self.name
+
+
+class DBMSUser(object):
+
+    def __init__(self, name, host, password):
+
+        self.name=name
+        self.host=host
+        self.password=password
+
+    def sql_check(self):
+
+        # DISCLAIMER:
+        # The request only checks if there is an existing grant with matching
+        # user/host/db. It does not check all the grants in details (insert,
+        # select, and so on).
+
+        return "SELECT User FROM user WHERE User='{user}' AND Host='{host}'" \
+                   .format(user=self.name,
+                           host=self.host)
+
+    def sql_check_password(self):
+
+        return "SELECT User FROM user WHERE User='{user}' AND Host='{host}' " \
+               "AND Password=PASSWORD('{password}')" \
+                   .format(user=self.name,
+                           host=self.host,
+                           password=self.password)
+
+    def sql_create(self):
+
+       return "CREATE USER '{user}'@'{host}' IDENTIFIED BY '{password}'" \
+                  .format(user=self.name,
+                          host=self.host,
+                          password=self.password)
+
+    def sql_update_password(self):
+
+        return "UPDATE user SET Password=PASSWORD('{password}') " \
+               "WHERE User='{user}' AND Host='{host}'" \
+                  .format(password=self.password,
+                          user=self.name,
+                          host=self.host)
+
+    def __str__(self):
+        return "{name}@{host}" \
+                   .format(name=self.name,
+                           host=self.host)
+
+class DBMSGrant(object):
     """Grant class"""
 
-    def __init__(self,priv,db,tables,user,host,
-                 password=None,with_grant=True):
+    def __init__(self,priv,db,tables,user,with_grant=True):
+
         self.priv=priv
         self.db=db
         self.tables=tables
         self.user=user
-        self.host=host
-        self.password=password
         self.with_grant=with_grant
 
-    def str(self, hide=False):
-        str_priv = self.priv.upper()
-        str_db = "%s" % (self.db)
-        str_tables = "%s" % (self.tables)
-        str_user = "'%s'" % (self.user)
-        str_host = "'%s'" % (self.host)
+    def sql_check(self):
+        return "SELECT User FROM db WHERE User='{user}' AND Host='{host}' " \
+               "AND Db='{db}'" \
+                   .format(user=self.user.name,
+                           host=self.user.host,
+                           db=self.db.name)
 
-        result = "GRANT {priv} ON {db}.{tables} TO {user}@{host}" \
-                     .format(priv=str_priv,
-                             db=str_db,
-                             tables=str_tables,
-                             user=str_user,
-                             host=str_host)
-        if self.password:
-            if hide:
-                str_password = "******"
-            else:
-                str_password = "'%s'" % (self.password)
-            result += " IDENTIFIED BY {password}".format(password=str_password)
+    def sql_create(self):
+
+        result = "GRANT {priv} ON {db}.{tables} TO '{user}'@'{host}'" \
+                     .format(priv=self.priv.upper(),
+                             db=self.db.name,
+                             tables=self.tables,
+                             user=self.user.name,
+                             host=self.user.host)
         if self.with_grant:
             result += " WITH GRANT OPTION"
         return result
 
-    def sql(self):
-        return self.str()
-
     def __str__(self):
-        return self.str(hide=True)
+        return "{priv} FOR {user} ON {db}.{tables}" \
+                   .format(priv=self.priv.upper(),
+                           user=str(self.user),
+                           db=self.db.name,
+                           tables=self.tables)
+
+
+class DBMSConn(object):
+
+    def __init__(self, host, user, passwd, db):
+        self.host = host
+        self.user = user
+        self.passwd = passwd
+        self.db = db
+        self.conn = MySQLdb.connect(host=self.host,
+                                    user=self.user,
+                                    passwd=self.passwd,
+                                    db=self.db)
+        self.cur = self.conn.cursor()
+
+    def execute(self, sql):
+        return self.cur.execute(sql)
+
+    def fetchall(self):
+        return self.cur.fetchall()
+
+    def has_result(self, sql):
+        return self.execute(sql) > 0
+
+    def flush(self):
+        print("I: flushing privileges")
+        self.execute("FLUSH PRIVILEGES")
+
+    def close(self):
+        if self.conn:
+            print ("D: closing db connection")
+            self.conn.close()
 
 def parse_args():
     """Parses cmd line arguments"""
@@ -140,75 +233,94 @@ def parse_args():
     action = args.action[0]
     return action
 
-def missing_databases(db_cur):
-    """Compare the list of all needed databases with all existing databases.
-       If all databases exist, returns None. Else returns the list of missing
-       databases."""
-    db_cur.execute("SHOW databases")
-    db_res = db_cur.fetchall()
-    existing_db = [ res[0] for res in db_res ]
-    print ("D: existing db: %s" % (str(existing_db)))
-    missing_db = [ db for db in DATABASES if db not in existing_db ]
-    if not len(missing_db): return None
-    return missing_db
+def expected_databases():
 
-def create_database(db_cur, db):
-    """Creates db given in parameter."""
-    print("I: creating database {db}".format(db=db))
-    db_cur.execute("CREATE DATABASE {db}".format(db=db))
+    return [ DBMSDB(db) for db in DATABASES ]
 
-def missing_grants(conf, db_cur):
-    """First creates the list of all needed grants. Then compares to the
-       existing grants. If all grants already exist, returns None. Else
-       returns the list of all missing grants."""
 
-    # build list of all needed grants
+def expected_users_grants(conf, databases):
+
+    users = []
     grants = []
-    all_rw_hosts = Set(conf.db_hosts + conf.controllers + conf.admins + ['localhost'])
-    for db in DATABASES:
-        for host in all_rw_hosts:
-            grants.append(Grant('all', db, '*', 'slurm', host,
-                          conf.passwords['slurm']))
+
+    all_rw_hosts = Set(conf.db_hosts
+                       + conf.controllers
+                       + conf.admins
+                       + ['localhost'])
+    for host in all_rw_hosts:
+        user = DBMSUser('slurm', host, conf.passwords['slurm'])
+        users.append(user)
+        for database in databases:
+            grants.append(DBMSGrant('all', database, '*', user))
 
     all_ro_hosts = Set(conf.importers)
     for host in all_ro_hosts:
-        grants.append(Grant('select', 'slurm_acct_db', '*', 'slurmro', host,
-                      conf.passwords['slurmro']))
+        user = DBMSUser('slurmro', host, conf.passwords['slurmro'])
+        users.append(user)
+        for database in databases:
+            grants.append(DBMSGrant('select', database, '*', user))
 
-    # then check against existing grants
-    missing_grants = []
-    for grant in grants:
-        # DISCLAIMER:
-        # The request only checks if there is an existing grant with mathing
-        # user/host/db. It does not check all the grants in details (insert,
-        # select, and so on).
-        req_check = "SELECT * FROM db WHERE Host='{host}' and Db='{db}' and User='{user}'" \
-                        .format(host=grant.host,
-                                db=grant.db,
-                                user=grant.user)
-        nb_found = db_cur.execute(req_check)
-        if nb_found:
-            print ("D: grant found: %s" % (str(grant)))
+    return users, grants
+
+
+def ensure_databases(dbms, databases, action):
+
+    missing = False
+
+    for database in databases:
+        if dbms.has_result(database.sql_check()):
+            print("D: database {db} already exist".format(db=str(database)))
         else:
-            missing_grants.append(grant)
-    if not len(missing_grants): return None
-    return missing_grants
+            print("W: database {db} is missing".format(db=str(database)))
+            missing = True
+            if action == 'create':
+                print("I: creating database {db}".format(db=str(database)))
+                dbms.execute(database.sql_create())
 
-def add_grant(db_cur, grant):
-    """Adds grant in MySQL."""
-    print("I: adding grant {grant}".format(grant=str(grant)))
-    db_cur.execute(grant.sql())
+    return missing
 
-def flush_privileges(db_cur):
-    """Flush privileges. This is needed after adding grants"""
-    print("I: flushing privileges")
-    db_cur.execute("FLUSH PRIVILEGES")
+def ensure_users_grants(dbms, users, grants, action):
 
-def close_con(db_con):
-    """Closes MySQL connection in parameter if open"""
-    if db_con:
-        print ("D: closing db connection")
-        db_con.close()
+    missing = False
+    flush_required = False
+
+    for user in users:
+        if dbms.has_result(user.sql_check()):
+            print("D: user {user} already exist".format(user=str(user)))
+            if dbms.has_result(user.sql_check_password()):
+                print("D: user {user} password is OK".format(user=str(user)))
+            else:
+                print("W: user {user} password must be updated"
+                      .format(user=str(user)))
+                missing = True
+                if action == 'create':
+                    print("I: update user {user} password"
+                          .format(user=str(user)))
+                    dbms.execute(user.sql_update_password())
+                    flush_required = True
+        else:
+            print("W: user {user} is missing".format(user=str(user)))
+            missing = True
+            if action == 'create':
+                print("I: creating user {user}".format(user=str(user)))
+                dbms.execute(user.sql_create())
+                flush_required = True
+
+    for grant in grants:
+        if dbms.has_result(grant.sql_check()):
+            print("D: grant {grant} already exist".format(grant=str(grant)))
+        else:
+            print("W: grant {grant} is missing".format(grant=str(grant)))
+            missing = True
+            if action == 'create':
+                print("I: creating grant {grant}".format(grant=str(grant)))
+                dbms.execute(grant.sql_create())
+                flush_required = True
+
+    if flush_required:
+        dbms.flush()
+
+    return missing
 
 def main():
     """Script main function"""
@@ -226,35 +338,19 @@ def main():
 
     for host in conf.db_hosts:
 
-        db_con = None
+        dbms = None
         try:
-            db_con = MySQLdb.connect(host=host,
-                                     user=conf.db_user,
-                                     passwd=conf.db_password,
-                                     db='mysql')
 
-            db_cur = db_con.cursor()
+            dbms = DBMSConn(host=host,
+                            user=conf.db_user,
+                            passwd=conf.db_password,
+                            db='mysql')
 
-            missing_db = missing_databases(db_cur)
-            if missing_db:
-                has_missing_db = True
-                for db in missing_db:
-                    print("W: db %s is missing" % (db))
-                    if action == 'create':
-                        create_database(db_cur, db)
+            databases = expected_databases()
+            has_missing_db = ensure_databases(dbms, databases, action)
 
-
-            missing_gt = missing_grants(conf, db_cur)
-            if missing_gt:
-                has_missing_gt = True
-                for grant in missing_gt:
-                    print("W: grant is missing: %s" % (str(grant)))
-                    if action == 'create':
-                        add_grant(db_cur, grant)
-                        needs_flush = True
-
-            if needs_flush:
-                flush_privileges(db_cur)
+            users, grants = expected_users_grants(conf, databases)
+            has_missing_gt = ensure_users_grants(dbms, users, grants, action)
 
             print("D: success with host %s" % (host))
             all_hosts_failed = False
@@ -265,7 +361,7 @@ def main():
             pass
 
         finally:
-            close_con(db_con)
+            dbms.close()
 
     if all_hosts_failed:
         print("E: all hosts failed")

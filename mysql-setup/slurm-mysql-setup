@@ -155,13 +155,12 @@ class DBMSUser(object):
 class DBMSGrant(object):
     """Grant class"""
 
-    def __init__(self,priv,db,tables,user,with_grant=True):
+    def __init__(self,priv,db,tables,user):
 
         self.priv=priv
         self.db=db
         self.tables=tables
         self.user=user
-        self.with_grant=with_grant
 
     def sql_check(self):
         return "SELECT User FROM db WHERE User='{user}' AND Host='{host}' " \
@@ -178,8 +177,6 @@ class DBMSGrant(object):
                              tables=self.tables,
                              user=self.user.name,
                              host=self.user.host)
-        if self.with_grant:
-            result += " WITH GRANT OPTION"
         return result
 
     def __str__(self):

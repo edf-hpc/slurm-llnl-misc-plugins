@@ -1,3 +1,11 @@
+slurm-llnl-misc-plugins (0.7.8) calibre9; urgency=medium
+
+  * mysql-setup: manage password changes
+  * mysql-setup: do not create slurm DB
+  * mysql-setup: do not create users with grant opt
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Fri, 25 Aug 2017 12:17:01 +0200
+
 slurm-llnl-misc-plugins (0.7.7) calibre9; urgency=medium
 
   * mysql-setup: add feature to restrict slurmro hosts

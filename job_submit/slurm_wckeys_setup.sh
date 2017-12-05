@@ -66,13 +66,41 @@ WCKEYS_DEL_TMP_FILE=$(tempfile -d ${TMP_MNT_POINT})
 ### Generate wckeys file ####
 
 nb=0
-for CODES_PROJETS_FILE_CURRENT in ${PAREO_FILE}
+for PAREO_ENTRY in ${PAREO_FILE}
 do
+  if [ $(grep http:// <<<"${PAREO_ENTRY}") ]
+  then
+    echo "Retrieve PAREO file via HTTP"
+    CODES_PROJETS_FILE_CURRENT=$(tempfile -d ${TMP_MNT_POINT})
+    wget -O ${CODES_PROJETS_FILE_CURRENT} ${PAREO_ENTRY}
+    if [ $? -ne 0 ]
+    then
+      print_msg "Error retrieving ${PAREO_ENTRY}"
+      exit 1
+    fi
+  else
+    echo "Retrieve PAREO file locally"
+    CODES_PROJETS_FILE_CURRENT=${PAREO_ENTRY}
+  fi
   if [ -f "${CODES_PROJETS_FILE_CURRENT}" ]
   then
     ((nb++))
     CODES_PROJETS_LIST=$(awk -F';' '{print tolower($1)}' ${CODES_PROJETS_FILE_CURRENT} | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u)
-    CODES_METIERS_FILE_CURRENT=$(echo ${CODES_FILE} | cut -f${nb} -d" ")
+    CODES_METIERS_ENTRY=$(echo ${CODES_FILE} | cut -f${nb} -d" ")
+    if [ $(grep http:// <<<"${CODES_METIERS_ENTRY}") ]
+    then
+      echo "Retrieve METIERS file via HTTP"
+      CODES_METIERS_FILE_CURRENT=$(tempfile -d ${TMP_MNT_POINT})
+      wget -O ${CODES_METIERS_FILE_CURRENT} ${CODES_METIERS_ENTRY}
+      if [ $? -ne 0 ]
+      then
+        print_msg "Error retrieving ${CODES_METIERS_ENTRY}"
+        exit 1
+      fi
+    else
+      echo "Retrieve METIERS file locally"
+      CODES_METIERS_FILE_CURRENT=${CODES_METIERS_ENTRY}
+    fi
       if [ -f "${CODES_METIERS_FILE_CURRENT}" ]
       then
         CODES_METIERS_LIST=$(iconv -f 437 -t ascii//TRANSLIT ${CODES_METIERS_FILE_CURRENT} | \
@@ -129,8 +157,15 @@ WHERE '${key}' NOT IN
 )
 LIMIT 1
 EOF
+  print_msg "Adding new wckey= ${key}"
   mysql --host=${StorageHost} --user=${StorageUser} --password=${StoragePass} < ${TMP_FILE_MYSQL}
-  print_msg "Add new wckey= ${key}"
+  if [ $? -ne 0 ]
+  then
+    print_msg "Error adding wckey= ${key}"
+    exit 1
+  else
+    print_msg "OK"
+  fi
 done
 
 
@@ -141,8 +176,16 @@ do
 cat > ${TMP_FILE_MYSQL} << EOF
 UPDATE ${DB_NAME}.${CLUSTERNAME}_wckey_table SET deleted = 1 WHERE wckey_name = '${key}';
 EOF
+  print_msg "Deleting old wckey= ${key}"
   mysql --host=${StorageHost} --user=${StorageUser} --password=${StoragePass} < ${TMP_FILE_MYSQL}
-  print_msg "Del old wckey= ${key}"
+  if [ $? -ne 0 ] 
+  then
+    print_msg "Error deleting wckey= ${key}"
+    exit 1
+  else
+    print_msg "OK"
+  fi
+
 done
 
 ### Block 5 ###

@@ -127,7 +127,7 @@ if [ -f "${SLURMDB_FILE}" ]
 then
   source ${SLURMDB_FILE}
 else
-  print_error 1 "File not found: ${CODES_FILE}"
+  print_error 1 "File not found: ${SLURMDB_FILE}"
 fi
 
 ### Block 2 ###
@@ -192,4 +192,3 @@ done
 ### Clean system ###
 umount ${TMP_MNT_POINT}
 rm -rf  ${TMP_MNT_POINT}
-

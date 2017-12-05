@@ -1,0 +1,4 @@
+pwmgt/slurm-pwmgt-nodes usr/lib/slurm-pwmgt/exec
+pwmgt/slurm-stop-nodes usr/lib/slurm-pwmgt/exec
+pwmgt/slurm-start-nodes usr/lib/slurm-pwmgt/exec
+pwmgt/main.conf etc/slurm-llnl/pwmgt

@@ -1,0 +1,235 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+##############################################################################
+# Copyright (C) 2016 EDF SA                                                  #
+#                                                                            #
+# Author: Rémi Palancher <remi-externe.palancher@edf.fr>                     #
+#                                                                            #
+# This file is part of slurm-llnl-misc-plugins.                              #
+#                                                                            #
+# This software is governed by the CeCILL-C license under French law and     #
+# abiding by the rules of distribution of free software. You can use,        #
+# modify and/ or redistribute the software under the terms of the CeCILL-C   #
+# license as circulated by CEA, CNRS and INRIA at the following URL          #
+# "http://www.cecill.info".                                                  #
+#                                                                            #
+# As a counterpart to the access to the source code and rights to copy,      #
+# modify and redistribute granted by the license, users are provided only    #
+# with a limited warranty and the software's author, the holder of the       #
+# economic rights, and the successive licensors have only limited            #
+# liability.                                                                 #
+#                                                                            #
+# In this respect, the user's attention is drawn to the risks associated     #
+# with loading, using, modifying and/or developing or reproducing the        #
+# software by the user in light of its specific status of free software,     #
+# that may mean that it is complicated to manipulate, and that also          #
+# therefore means that it is reserved for developers and experienced         #
+# professionals having in-depth computer knowledge. Users are therefore      #
+# encouraged to load and test the software's suitability as regards their    #
+# requirements in conditions enabling the security of their systems and/or   #
+# data to be ensured and, more generally, to use and operate it in the       #
+# same conditions as regards security.                                       #
+#                                                                            #
+# The fact that you are presently reading this means that you have had       #
+# knowledge of the CeCILL-C license and that you accept its terms.           #
+#                                                                            #
+##############################################################################
+
+import sys
+import os
+import logging
+import logging.handlers
+import ConfigParser
+from StringIO import StringIO
+from ClusterShell.NodeSet import NodeSet
+from ClusterShell.Task import task_self
+from ClusterShell.Event import EventHandler
+from ClusterShell.Worker.Exec import ExecWorker
+from ClusterShell.Worker.Ssh import WorkerSsh
+
+logger = None
+
+class AppConf():
+    """Runtime configuration class."""
+
+    def __init__(self):
+
+        self.debug = False
+        self.conf_file = '/etc/slurm-llnl/pwmgt/main.conf'
+        self.action = None
+        self.ssh_identity = None
+        self.ipmi_exec = None
+        self.ipmi_bootcmd = None
+        self.ipmi_wakecmd = None
+        self.ipmi_prefix = None
+        self.ipmi_user = None
+        self.ipmi_password = None
+
+    def dump(self):
+        logger.debug("runtime configuration dump:")
+        logger.debug("- debug: %s", str(self.debug))
+        logger.debug("- conf_file: %s", str(self.conf_file))
+        logger.debug("- action: %s", str(self.action))
+        logger.debug("- ssh_identity: %s", str(self.ssh_identity))
+        logger.debug("- ipmi_exec: %s", str(self.ipmi_exec))
+        logger.debug("- ipmi_bootcmd: %s", str(self.ipmi_bootcmd))
+        logger.debug("- ipmi_wakecmd: %s", str(self.ipmi_wakecmd))
+        logger.debug("- ipmi_prefix: %s", str(self.ipmi_prefix))
+        logger.debug("- ipmi_user: %s", str(self.ipmi_user))
+        logger.debug("- ipmi_password: %s", str(self.ipmi_password))
+
+
+conf = AppConf()  # global runtime configuration object
+
+
+class SlurmPwmgtHandler(EventHandler):
+
+    def ev_read(self, worker):
+        logger.debug("%s: %s", worker.current_node, worker.current_msg)
+
+    def ev_hup(self, worker):
+        if worker.current_rc != 0:
+            logger.error("%s: returned with error code %s",
+                         worker.current_node,
+                         worker.current_rc)
+        else:
+            logger.debug("exit code 0 on node %s", worker.current_node)
+
+    def ev_timeout(self, worker):
+        logger.error("timeout on nodes: %s",
+                     str(NodeSet.fromlist(worker.iter_keys_timeout())))
+
+    def ev_close(self, worker):
+        logger.debug('command over on all nodes')
+
+def parse_conf():
+
+    global conf
+
+    """Parse configuration file and set runtime configuration accordingly.
+       Here are defined default configuration file parameters."""
+    defaults = StringIO(
+      "[app]\n"
+      "debug=no\n"
+      "action=poweroff\n"
+      "[ssh]\n"
+      "identity=/etc/slurm-llnl/pwmgt/id_rsa_slurm\n"
+      "[ipmi]\n"
+      "exec=/usr/bin/ipmitool\n"
+      "bootcmd=chassis power on\n"
+      "wakecmd=raw 0x3a 0x1d 0x0 0x0\n"
+      "prefix=bmc\n"
+      "user=ADMIN\n"
+      "password=CHANGEME\n")
+    parser = ConfigParser.ConfigParser()
+    parser.readfp(defaults)
+    parser.read(conf.conf_file)
+    conf.debug = parser.getboolean('app', 'debug')
+    conf.action = parser.get('app', 'action')
+    conf.ssh_identity = parser.get('ssh', 'identity')
+    conf.ipmi_exec = parser.get('ipmi', 'exec')
+    conf.ipmi_bootcmd = parser.get('ipmi', 'bootcmd')
+    conf.ipmi_wakecmd = parser.get('ipmi', 'wakecmd')
+    conf.ipmi_prefix = parser.get('ipmi', 'prefix')
+    conf.ipmi_user = parser.get('ipmi', 'user')
+    conf.ipmi_password = parser.get('ipmi', 'password')
+
+
+def init_logger():
+    """Initialize logger to syslog with proper format"""
+
+    global logger
+
+    logger = logging.getLogger('slurm-pwmgt-nodes')
+    if conf.debug:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
+    handler = logging.handlers.SysLogHandler(address='/dev/log')
+    formatter = logging.Formatter('%(name)s: %(levelname)s: %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+def get_prog_action():
+    """Returns the function to execute based on program name"""
+
+    action = sys.argv[1]
+    if action == 'stop':
+        return stop_nodes
+    elif action == 'start':
+        return start_nodes
+    else:
+        logger.error("undefined action %s", action)
+        sys.exit(1)
+
+def stop_nodes(hostlist):
+    """Stop nodes by running specific command by SSH"""
+
+    if conf.action == 'poweroff':
+        cmd = 'poweroff'
+        verb = 'powering off'
+    elif conf.action == 'suspend':
+        cmd = 'suspend'
+        verb = 'suspending'
+    else:
+        logger.error("unknown action %s", conf.action)
+        sys.exit(1)
+
+    logger.info("%s nodes %s", verb, hostlist)
+    logger.debug("running cmd: %s", cmd)
+
+    task = task_self()
+    task.set_info('ssh_options',
+                  "-o StrictHostKeyChecking=no " \
+                  "-o UserKnownHostsFile=/dev/null " \
+                  "-l root -i %s" \
+                    % (conf.ssh_identity))
+    worker = WorkerSsh(hostlist,
+                       handler=SlurmPwmgtHandler(),
+                       timeout=10,
+                       command=cmd)
+    task.schedule(worker)
+    task.resume()
+
+def start_nodes(hostlist):
+    """Start nodes through their BMC with IPMI"""
+
+    if conf.action == 'poweroff':
+        cmdipmi = conf.ipmi_bootcmd
+        verb = 'powering on'
+    elif conf.action == 'suspend':
+        cmdipmi = conf.ipmi_wakecmd
+        verb = 'waking up'
+    else:
+        logger.error("unknown action %s", conf.action)
+        sys.exit(1)
+
+    logger.info("%s nodes %s", verb, hostlist)
+
+    os.environ["IPMI_PASSWORD"] = conf.ipmi_password
+    cmd = "{cmdexec} -I lanplus -U {user} -E -H {prefix}%host {cmdipmi}" \
+            .format(cmdexec=conf.ipmi_exec,
+                    user=conf.ipmi_user,
+                    prefix=conf.ipmi_prefix,
+                    cmdipmi=cmdipmi)
+    logger.debug("running cmd: %s", cmd)
+    task = task_self()
+    worker = ExecWorker(hostlist,
+                        handler=SlurmPwmgtHandler(),
+                        timeout=10,
+                        command=cmd)
+    task.schedule(worker)
+    task.resume()
+
+def main():
+    """Main function"""
+
+    parse_conf()
+    init_logger()
+    conf.dump()
+    hostlist = sys.argv[2]
+    action = get_prog_action()
+    action(hostlist)
+
+if __name__ == '__main__':
+    main()

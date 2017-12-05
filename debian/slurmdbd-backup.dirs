@@ -1,0 +1,3 @@
+etc/slurm-llnl
+var/backups/slurmdbd
+var/backups/slurmdbd/database

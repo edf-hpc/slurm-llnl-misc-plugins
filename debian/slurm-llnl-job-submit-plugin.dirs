@@ -1,0 +1,3 @@
+usr/lib/slurm
+etc/slurm-llnl/wckeysctl
+etc/default

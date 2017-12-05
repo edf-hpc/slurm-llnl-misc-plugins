@@ -1,0 +1,30 @@
+### primary server to ping via ethernet ###
+ETHMASTER="server1"
+
+### backup server to ping via ethernet ###
+ETHBACKUP="server2"
+
+### primary server to ping via infiniband ###
+IBMASTER="ibserver1"
+
+### backup server to ping via ethernet ###
+IBBACKUP="ibserver2"
+
+### infiniband card rate expected ###
+IBLIMIT=56
+
+### mount points to check ###
+MOUNTS="/home /scratch /tmp"
+
+###  Maximum percentage of disk space used for each mount point ###
+FSLIMIT=85
+
+### default prmary group for new users ###
+PMGROUP="primary-cl-users"
+
+### number of minimal set of packages installed ###
+NRPKGS=951
+
+### kernel version expected (uname -r) ###
+KERNELVER="3.2.0-0.bpo.4-amd64"
+

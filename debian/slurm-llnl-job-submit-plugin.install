@@ -1,0 +1,4 @@
+job_submit/job_submit.lua		usr/lib/slurm
+job_submit/slurm-gen-qos-conf		usr/sbin
+job_submit/slurm-wckeys-setup		usr/sbin
+job_submit/wckeysctl  			etc/defaut

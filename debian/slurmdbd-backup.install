@@ -1,0 +1,2 @@
+slurmdbd-backup/slurmdbd-backup usr/sbin
+slurmdbd-backup/slurmdbd-backup.vars etc/slurm-llnl

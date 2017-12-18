@@ -1,6 +1,11 @@
 Packaged-By: Mehdi Dogguy <mehdi@debian.org>
 Packaged-Date: Wed, 16 Oct 2013 10:00:00 +0200
 
+Files: debian/*
+Copyright: © 2013 Mehdi Dogguy <mehdi@debian.org>
+           © 2017 Scibian Project <legal@scibian.org>
+License: GPL-2
+
 Files: *
 Copyright: © 2013 Mehdi Dogguy <mehdi@debian.org>
 License: GPL-2

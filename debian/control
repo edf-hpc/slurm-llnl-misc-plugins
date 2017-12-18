@@ -1,10 +1,12 @@
 Source: slurm-llnl-misc-plugins
 Priority: optional
-Maintainer: Mehdi Dogguy <mehdi@debian.org>
+Maintainer: Scibian Project <packaging@scibian.org>
 Build-Depends:
  debhelper (>= 8)
 Standards-Version: 3.9.5
 Section: doc
+Vcs-Git: https://github.com/scibian/slurm-llnl-misc-plugins.git
+Vcs-Browser: https://github.com/scibian/slurm-llnl-misc-plugins
 
 Package: slurmdbd-backup
 Architecture: all

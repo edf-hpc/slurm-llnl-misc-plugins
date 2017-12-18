@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.7.10sci8u1) scibian8; urgency=medium
+
+  * Scibian8 rebuild.
+
+ -- Thomas Hamel <thomas-externe.hamel@edf.fr>  Mon, 18 Dec 2017 10:37:58 +0100
+
 slurm-llnl-misc-plugins (0.7.10) calibre9; urgency=medium
 
   * Bugfix packaging : rename script slurm-wckeys-setup in install file

@@ -41,11 +41,12 @@ CMD=$(basename $0)
 [ -f /etc/slurm-llnl/slurmdbd.conf ] && source /etc/slurm-llnl/slurmdbd.conf
 
 print_error () {
-        echo -e "\e[00;31m$2\e[00m" 1>&2
+        logger -s -t wckeys-setup "ERROR: ${2}"
         exit ${1}
 }
 
 print_msg () {
+        logger -t wckeys-setup "INFO: ${1}"
         echo -e "\e[00;34m$1\e[00m" 1>&2
 }
 
@@ -64,7 +65,6 @@ WCKEYS_DEL_TMP_FILE=$(tempfile -d ${TMP_MNT_POINT})
 
 ### Block 1 ###
 ### Generate wckeys file ####
-
 nb=0
 iteration=1
 for PAREO_ENTRY in ${PAREO_FILE}
@@ -150,7 +150,7 @@ EOF
   mysql --host=${StorageHost} --user=${StorageUser} --password=${StoragePass} < ${TMP_FILE_MYSQL}
   if [ $? -ne 0 ]
   then
-    print_msg "Error adding wckey= ${key}"
+    print_error 1  "Adding wckey= ${key}"
     exit 1
   else
     print_msg "OK"
@@ -169,12 +169,11 @@ EOF
   mysql --host=${StorageHost} --user=${StorageUser} --password=${StoragePass} < ${TMP_FILE_MYSQL}
   if [ $? -ne 0 ] 
   then
-    print_msg "Error deleting wckey= ${key}"
+    print_error 1  "Error deleting wckey= ${key}"
     exit 1
   else
     print_msg "OK"
   fi
-
 done
 
 ### Block 5 ###

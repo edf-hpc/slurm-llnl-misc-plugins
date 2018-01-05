@@ -67,6 +67,18 @@ Description: MySQL setup script for SlurmDBD
  designed to be idempotent by doing only what is needed. This makes it
  eventually usable within Puppet manifests for instance.
 
+Package: slurm-llnl-setup-wckeys
+Architecture: all
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+ curl,
+ bsdutils
+Description: Wcceys setup script for SlurmDBD
+ This package provides a Shell script which add wckeys into Slurmdbd 
+ database. It assembles codes (one by one) from 2 files to create a
+ wckey and insert it into the slurm database.
+
 Package: slurm-llnl-sync-accounts
 Architecture: all
 Depends:

@@ -41,11 +41,12 @@ CMD=$(basename $0)
 [ -f /etc/slurm-llnl/slurmdbd.conf ] && source /etc/slurm-llnl/slurmdbd.conf
 
 print_error () {
-        echo -e "\e[00;31m$2\e[00m" 1>&2
+        logger -s -t wckeys-setup "ERROR: ${2}"
         exit ${1}
 }
 
 print_msg () {
+        logger -t wckeys-setup "INFO: ${1}"
         echo -e "\e[00;34m$1\e[00m" 1>&2
 }
 
@@ -64,62 +65,50 @@ WCKEYS_DEL_TMP_FILE=$(tempfile -d ${TMP_MNT_POINT})
 
 ### Block 1 ###
 ### Generate wckeys file ####
-
 nb=0
+iteration=1
 for PAREO_ENTRY in ${PAREO_FILE}
 do
-  if [ $(grep http:// <<<"${PAREO_ENTRY}") ]
+  print_msg "Retrieve PAREO file ${iteration}"
+  CODES_PROJETS_FILE_CURRENT=$(tempfile -d ${TMP_MNT_POINT})
+  curl -s ${PAREO_ENTRY} -o ${CODES_PROJETS_FILE_CURRENT}
+  if [ $? -ne 0 ]
   then
-    echo "Retrieve PAREO file via HTTP"
-    CODES_PROJETS_FILE_CURRENT=$(tempfile -d ${TMP_MNT_POINT})
-    wget -O ${CODES_PROJETS_FILE_CURRENT} ${PAREO_ENTRY}
-    if [ $? -ne 0 ]
-    then
-      print_msg "Error retrieving ${PAREO_ENTRY}"
-      exit 1
-    fi
-  else
-    echo "Retrieve PAREO file locally"
-    CODES_PROJETS_FILE_CURRENT=${PAREO_ENTRY}
+    print_error 1 "Retrieving ${PAREO_ENTRY}"
+    exit 1
   fi
   if [ -f "${CODES_PROJETS_FILE_CURRENT}" ]
   then
     ((nb++))
     CODES_PROJETS_LIST=$(awk -F';' '{print tolower($1)}' ${CODES_PROJETS_FILE_CURRENT} | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u)
     CODES_METIERS_ENTRY=$(echo ${CODES_FILE} | cut -f${nb} -d" ")
-    if [ $(grep http:// <<<"${CODES_METIERS_ENTRY}") ]
+    print_msg "Retrieve METIERS file ${iteration}"
+    CODES_METIERS_FILE_CURRENT=$(tempfile -d ${TMP_MNT_POINT})
+    curl -s ${CODES_METIERS_ENTRY} -o ${CODES_METIERS_FILE_CURRENT}
+    if [ $? -ne 0 ]
     then
-      echo "Retrieve METIERS file via HTTP"
-      CODES_METIERS_FILE_CURRENT=$(tempfile -d ${TMP_MNT_POINT})
-      wget -O ${CODES_METIERS_FILE_CURRENT} ${CODES_METIERS_ENTRY}
-      if [ $? -ne 0 ]
-      then
-        print_msg "Error retrieving ${CODES_METIERS_ENTRY}"
-        exit 1
-      fi
-    else
-      echo "Retrieve METIERS file locally"
-      CODES_METIERS_FILE_CURRENT=${CODES_METIERS_ENTRY}
+      print_error 1 "Retrieving ${CODES_METIERS_ENTRY}"
+      exit 1
     fi
-      if [ -f "${CODES_METIERS_FILE_CURRENT}" ]
-      then
-        CODES_METIERS_LIST=$(iconv -f 437 -t ascii//TRANSLIT ${CODES_METIERS_FILE_CURRENT} | \
-        awk -F';' '{gsub (/[ )]$/, "", $1 ); print tolower($1)}' | \
-        tr '[:blank:]' '_' | sed -r -e 's/[_]+/_/g' -e 's/^[_]+//g' -e 's/[_]+$//g' | sort -u)
-
-        for project in ${CODES_PROJETS_LIST}
+    if [ -f "${CODES_METIERS_FILE_CURRENT}" ]
+    then
+      CODES_METIERS_LIST=$(iconv -f 437 -t ascii//TRANSLIT ${CODES_METIERS_FILE_CURRENT} | \
+      awk -F';' '{gsub (/[ )]$/, "", $1 ); print tolower($1)}' | \
+      tr '[:blank:]' '_' | sed -r -e 's/[_]+/_/g' -e 's/^[_]+//g' -e 's/[_]+$//g' | sort -u)
+      for project in ${CODES_PROJETS_LIST}
+      do
+        for application in ${CODES_METIERS_LIST}
         do
-          for application in ${CODES_METIERS_LIST}
-          do
-            echo "${project}:${application}"
-          done >> ${WCKEYS_TMP_FILE}
-        done
-      else
-        print_error 1 "File not found: ${CODES_METIERS_FILE_CURRENT}"
+          echo "${project}:${application}"
+        done >> ${WCKEYS_TMP_FILE}
+      done
+    else
+      print_error 1 "File not found: ${CODES_METIERS_FILE_CURRENT}"
       fi
   else
     print_error 1 "File not found: ${CODES_PROJETS_FILE_CURRENT}"
   fi
+  ((iteration++))
 done
 sort -u ${WCKEYS_TMP_FILE} -o ${WCKEYS_FILE}
 
@@ -161,7 +150,7 @@ EOF
   mysql --host=${StorageHost} --user=${StorageUser} --password=${StoragePass} < ${TMP_FILE_MYSQL}
   if [ $? -ne 0 ]
   then
-    print_msg "Error adding wckey= ${key}"
+    print_error 1  "Adding wckey= ${key}"
     exit 1
   else
     print_msg "OK"
@@ -180,12 +169,11 @@ EOF
   mysql --host=${StorageHost} --user=${StorageUser} --password=${StoragePass} < ${TMP_FILE_MYSQL}
   if [ $? -ne 0 ] 
   then
-    print_msg "Error deleting wckey= ${key}"
+    print_error 1  "Error deleting wckey= ${key}"
     exit 1
   else
     print_msg "OK"
   fi
-
 done
 
 ### Block 5 ###

@@ -72,8 +72,7 @@ Architecture: all
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
- curl,
- bsdutils
+ curl
 Description: Wcceys setup script for SlurmDBD
  This package provides a Shell script which add wckeys into Slurmdbd 
  database. It assembles codes (one by one) from 2 files to create a

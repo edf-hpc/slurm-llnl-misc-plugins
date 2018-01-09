@@ -38,6 +38,7 @@ Depends:
  ${shlibs:Depends},
  ${misc:Depends},
  slurm-wlm-basic-plugins (>= 14.11),
+ slurm-llnl-setup-wckeys,
  python
 Description: Lua plugin for routing jobs in approriate defined QOSes
  This package provides a lua script for routing jobs in appropriate QOSes

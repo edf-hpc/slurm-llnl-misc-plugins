@@ -1,1 +1,1 @@
-50 * * * * /usr/sbin/slurm-wckeys-setup 2>&1 
+50 * * * * root /usr/sbin/slurm-wckeys-setup 2>&1 

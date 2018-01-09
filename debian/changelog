@@ -1,3 +1,10 @@
+slurm-llnl-misc-plugins (0.7.12sci8u1) scibian8; urgency=medium
+
+  * Remove bsdutils dependancy as it's an essential package
+  * Bugfix crontab for slurm-llnl-setup-wckeys
+
+ -- Benoit Boccard <benoit-externe.boccard@edf.fr>  Tue, 09 Jan 2018 15:24:46 +0100
+
 slurm-llnl-misc-plugins (0.7.11sci8u1) scibian8; urgency=medium
 
   * Use curl instead of wget Simpler logic in script and uniformisation for files locations in config

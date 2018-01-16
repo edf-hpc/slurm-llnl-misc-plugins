@@ -1,3 +1,10 @@
+slurm-llnl-misc-plugins (0.7.14) UNRELEASED; urgency=medium
+
+  * Make slurm-llnl-setup-wckeys Breaks/Replaces old slurm-llnl-job-submit-plugin
+    to ensure smooth upgrades.
+
+ -- Mehdi Dogguy <mehdi.dogguy@edf.fr>  Tue, 16 Jan 2018 14:45:36 +0100
+
 slurm-llnl-misc-plugins (0.7.13) calibre9; urgency=medium
 
   * Add dependancy between slurm-llnl-job-submit-plugin and slurm-llnl-setup-wckeys

@@ -36,7 +36,7 @@ Depends:
  ${shlibs:Depends},
  ${misc:Depends},
  slurm-wlm-basic-plugins (>= 14.11),
- slurm-llnl-setup-wckeys,
+ slurm-llnl-setup-wckeys (>= 0.7.11),
  python
 Description: Lua plugin for routing jobs in approriate defined QOSes
  This package provides a lua script for routing jobs in appropriate QOSes
@@ -74,6 +74,8 @@ Depends:
  ${shlibs:Depends},
  ${misc:Depends},
  curl
+Breaks: slurm-llnl-job-submit-plugin (<< 0.7.13)
+Replaces: slurm-llnl-job-submit-plugin (<< 0.7.13)
 Description: Wcceys setup script for SlurmDBD
  This package provides a Shell script which add wckeys into Slurmdbd 
  database. It assembles codes (one by one) from 2 files to create a

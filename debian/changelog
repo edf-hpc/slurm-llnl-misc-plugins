@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.7.15) calibre9; urgency=medium
+
+ * Send cron output to /dev/null
+
+ -- Benoit Boccard <benoit-externe.boccard@edf.fr>  Wed, 24 Jan 2018 10:11:35 +0100
+
 slurm-llnl-misc-plugins (0.7.14) calibre9; urgency=medium
 
   * Make slurm-llnl-setup-wckeys Breaks/Replaces old slurm-llnl-job-submit-plugin

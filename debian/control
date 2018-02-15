@@ -73,7 +73,8 @@ Architecture: all
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
- curl
+ curl,
+ dos2unix
 Breaks: slurm-llnl-job-submit-plugin (<< 0.7.13)
 Replaces: slurm-llnl-job-submit-plugin (<< 0.7.13)
 Description: Wcceys setup script for SlurmDBD

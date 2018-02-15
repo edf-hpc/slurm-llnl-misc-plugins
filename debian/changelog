@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.7.16) calibre9; urgency=medium
+
+  * Ensure the files are in ASCII unix mode before operating on it
+
+ -- Benoit Boccard <benoit-externe.boccard@edf.fr>  Thu, 15 Feb 2018 14:54:37 +0100
+
 slurm-llnl-misc-plugins (0.7.15) calibre9; urgency=medium
 
  * Send cron output to /dev/null

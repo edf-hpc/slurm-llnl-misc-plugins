@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.7.13sci9u1) scibian9; urgency=medium
+
+  * Rebuild for scibian9
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Thu, 26 Apr 2018 16:06:36 +0200
+
 slurm-llnl-misc-plugins (0.7.13sci8u1) scibian8; urgency=medium
 
   * Add dependancy between slurm-llnl-job-submit-plugin and slurm-llnl-setup-wckeys

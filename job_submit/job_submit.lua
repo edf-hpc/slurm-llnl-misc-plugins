@@ -306,10 +306,7 @@ function build_qos_list ()
    return qos_list, qos_accounts
 end
 
-function track_wckey (job_desc, part_list, submit_uid)
-   local username
-   local cmd = "getent passwd " .. submit_uid .. "| awk -F':' '{print tolower($1)}'"
-   username = os.capture(cmd) -- convert uid to logname
+function track_wckey (job_desc, part_list, submit_uid, username)
    wckey_conf = io.open (WCKEY_CONF_FILE, "r")
    user_exception = io.open (WCKEY_USER_EXCEPTION_FILE, "r")
 
@@ -352,17 +349,17 @@ end
 --########################################################################--
 
 function slurm_job_submit ( job_desc, part_list, submit_uid )
-   status = track_wckey(job_desc, part_list, submit_uid)
+
+   username = job_desc.user_name
+
+   status = track_wckey(job_desc, part_list, submit_uid, username)
    if status ~= 0 then
       return status
    end
 
-   local username
    local qos_list, qos_accounts = build_qos_list()
    local maxtime
    local maxcpus
-   local cmd =  "getent passwd " .. submit_uid .. "| awk -F':' '{print tolower($1)}'"
-   username = os.capture(cmd) -- convert uid to logname
 
    -- QOS set by user. In this case, the script simply sets the partition
    -- accordingly.

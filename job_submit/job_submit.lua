@@ -150,36 +150,6 @@ end
 
 --========================================================================--
 
-function os.capture(cmd)
-   -- Read the output of a system command
-   -- cmd   : command to be executed
-   local f = assert(io.popen(cmd, 'r'))
-   local s = assert(f:read('*a'))
-   f:close()
-   s = string.gsub(s, '^%s+', '')
-   s = string.gsub(s, '%s+$', '')
-   s = string.gsub(s, '[\n\r]+', ' ')
-   return s
-end
-
---========================================================================--
-
-function test_execution(cmd)
-   -- Return true if the command returns successfully
-   -- cmd   : command to be executed
-   local result = os.execute(cmd)
-   local final_result = false
-   if _VERSION == 'Lua 5.2'
-   then
-      final_result = result
-   else
-      final_result = ( result == 0 )
-   end
-   return final_result
-end
-
---========================================================================--
-
 function to_minute(inputstr)
    -- convert SLURM time format in minute :
    -- inpustr : string should looks like :
@@ -306,39 +276,59 @@ function build_qos_list ()
    return qos_list, qos_accounts
 end
 
-function track_wckey (job_desc, part_list, submit_uid, username)
-   wckey_conf = io.open (WCKEY_CONF_FILE, "r")
-   user_exception = io.open (WCKEY_USER_EXCEPTION_FILE, "r")
+-- see if the file exists
+function file_exists(file)
+   local f = io.open(file, "rb")
+   if f then f:close() end
+   return f ~= nil
+end
 
-   if wckey_conf ~= nil then
-      if job_desc.wckey == nil then
-         if user_exception ~= nil then
-            local exep_check = "grep -i -q -x " .. username .. " " .. WCKEY_USER_EXCEPTION_FILE
-            if test_execution(exep_check) then
-               slurm.log_info("slurm_wckey_exeption: job from user:%s/%u without wckey.", username, submit_uid)
-               return 0
-            end
-         end
-         slurm.log_info("slurm_job_modify: job from user:%s/%u didn't specify any valid wckey.", username, submit_uid)
-         return ESLURM_INVALID_WCKEY
-      else
-         -- Convert wckey to lowercase  --
-         if job_desc.wckey ~= nil then
-            job_desc.wckey = string.lower(job_desc.wckey)
-         end
-         local wc_check = "grep -q -x " .. job_desc.wckey .. " " .. WCKEY_CONF_FILE
-         slurm.log_info("slurm_job_modify: job from user:%s/%u searching wckey %s", username, submit_uid, wc_check)
-         if test_execution(wc_check) then
-            slurm.log_info("slurm_job_modify: job from user:%s/%u with wckey=%s.", username, submit_uid, showstring(job_desc.wckey))
+-- search for line in file, return true if present, false otherwise
+function line_present(file, search)
+   for line in io.lines(file) do
+      if search == line then
+         return true
+      end
+  end
+  return false
+end
+
+-- check wckey among WCKEY_CONF_FILE and WCKEY_USER_EXCEPTION_FILE
+function track_wckey (job_desc, part_list, submit_uid, username)
+
+   -- if WCKEY_CONF_FILE does not exist, return OK
+   if not file_exists(WCKEY_CONF_FILE) then
+     return 0
+   end
+
+   if job_desc.wckey == nil then
+      if file_exists(WCKEY_USER_EXCEPTION_FILE) then
+         if line_present(WCKEY_USER_EXCEPTION_FILE, username) then
+            slurm.log_info("track_wckey: job from user:%s/%u has a valid wckey exception.",
+                           username, submit_uid)
             return 0
-         else
-            slurm.log_info("slurm_job_modify: job from user:%s/%u did specify an invalid wckey:%s", username, submit_uid, showstring(job_desc.wckey))
-            return ESLURM_INVALID_WCKEY
          end
       end
+      -- if WCKEY_USER_EXCEPTION_FILE does not exist or username name not found, return wckey error
+      slurm.log_info("track_wckey: job from user:%s/%u didn't specify any valid wckey.",
+                     username, submit_uid)
+      return ESLURM_INVALID_WCKEY
    else
-      return 0
+     -- Convert wckey to lowercase  --
+     job_desc.wckey = string.lower(job_desc.wckey)
+     if line_present(WCKEY_CONF_FILE, job_desc.wckey) then
+        -- wckey present in file, return OK
+        slurm.log_info("track_wckey: job from user:%s/%u with wckey=%s.",
+                       username, submit_uid, showstring(job_desc.wckey))
+        return 0
+     else
+        -- wckey not found, return wckey error
+        slurm.log_info("track_wckey: job from user:%s/%u did specify an invalid wckey:%s",
+                       username, submit_uid, showstring(job_desc.wckey))
+        return ESLURM_INVALID_WCKEY
+     end
    end
+
 end
 
 

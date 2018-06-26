@@ -42,7 +42,9 @@ INFINITE       = 4294967294  -- max unsigned 32 bits integer value for slurm
 CORES_PER_NODE = 4
 ENFORCE_ACCOUNT = false      -- check qos/account compatibility, default to no
 
-ESLURM_INVALID_WCKEY = 2057  -- Cf /usr/include/slurm/slurm_errno.h
+-- cf. slurm/slurm_errno.h
+ESLURM_INVALID_WCKEY = 2057
+ESLURM_INVALID_QOS = 2066
 WCKEY_CONF_FILE = "/etc/slurm-llnl/wckeysctl/wckeys"
 WCKEY_USER_EXCEPTION_FILE = "/etc/slurm-llnl/wckeysctl/wckeys_user_exception"
 
@@ -214,14 +216,14 @@ function build_qos_list ()
    local qos_partition
    local qos_file
 
-   qos_file = io.open (QOS_CONF, "r")
-   if qos_file == nil then
-      -- Read informations from sacctmgr command
-      qos_rec = assert (io.popen ("sacctmgr --noheader --parsable show qos format=\"Name,MaxWall,MaxCPUs\" | sort -t'_' -d -k 2 -k 1"))
-   else
-      -- Read qos_conf file
-      qos_rec = assert (io.popen ("cat " .. QOS_CONF))
+   if not file_exists(QOS_CONF) then
+      slurm.log_info("build_qos_list: qos file %s does not exist, failed to build QOS list",
+                     QOS_CONF)
+      return nil
    end
+
+   -- Read qos_conf file
+   qos_rec = assert (io.open (QOS_CONF, 'r'))
 
    for line in qos_rec:lines() do
       local t = {}
@@ -258,6 +260,8 @@ function build_qos_list ()
       end
    end -- for loop
 
+   io.close(qos_rec)
+
    -- Sort  all tables
    if qos_list ~= nil then
       -- table.sort(qos_list, function(a,b) return a < b end) -- sort qos (optional)
@@ -272,8 +276,9 @@ function build_qos_list ()
          end
       end
    end
-   io.close(qos_rec)
+
    return qos_list, qos_accounts
+
 end
 
 -- see if the file exists
@@ -348,6 +353,11 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
    end
 
    local qos_list, qos_accounts = build_qos_list()
+   -- if unable to build QOS list, return ESLURM_INVALID_QOS
+   if qos_list == nil then
+      return ESLURM_INVALID_QOS
+   end
+
    local maxtime
    local maxcpus
 

@@ -45,6 +45,7 @@ ENFORCE_ACCOUNT = false      -- check qos/account compatibility, default to no
 -- cf. slurm/slurm_errno.h
 ESLURM_INVALID_WCKEY = 2057
 ESLURM_INVALID_QOS = 2066
+ESLURM_INVALID_ACCOUNT = 2045
 WCKEY_CONF_FILE = "/etc/slurm-llnl/wckeysctl/wckeys"
 WCKEY_USER_EXCEPTION_FILE = "/etc/slurm-llnl/wckeysctl/wckeys_user_exception"
 
@@ -417,8 +418,15 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
       -- value to user's default account for later processing.
       if ENFORCE_ACCOUNT then
           if job_desc.account == nil then
-             slurm.log_info("slurm_job_submit: no account specified by user %s, using default account %s.", username, job_desc.default_account)
-             job_desc.account = job_desc.default_account
+             if job_desc.default_account == nil then
+                slurm.log_info("slurm_job_submit: user %s has no default account, unable to assign default account.",
+                               username)
+                return ESLURM_INVALID_ACCOUNT
+             else
+                slurm.log_info("slurm_job_submit: no account specified by user %s, using default account %s.",
+                               username, job_desc.default_account)
+                job_desc.account = job_desc.default_account
+             end
           else
              slurm.log_info("slurm_job_submit: account %s specified by user %s.", job_desc.account, username)
           end

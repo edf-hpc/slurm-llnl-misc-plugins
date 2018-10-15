@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.8.0sci9u1) scibian9; urgency=medium
+
+  * Scibian 9 rebuild
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Mon, 15 Oct 2018 10:35:30 +0200
+
 slurm-llnl-misc-plugins (0.8.0) calibre9; urgency=medium
 
   * job_submit.lua: remove getent to get username

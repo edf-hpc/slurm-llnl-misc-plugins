@@ -42,7 +42,10 @@ INFINITE       = 4294967294  -- max unsigned 32 bits integer value for slurm
 CORES_PER_NODE = 4
 ENFORCE_ACCOUNT = false      -- check qos/account compatibility, default to no
 
-ESLURM_INVALID_WCKEY = 2057  -- Cf /usr/include/slurm/slurm_errno.h
+-- cf. slurm/slurm_errno.h
+ESLURM_INVALID_WCKEY = 2057
+ESLURM_INVALID_QOS = 2066
+ESLURM_INVALID_ACCOUNT = 2045
 WCKEY_CONF_FILE = "/etc/slurm-llnl/wckeysctl/wckeys"
 WCKEY_USER_EXCEPTION_FILE = "/etc/slurm-llnl/wckeysctl/wckeys_user_exception"
 
@@ -150,36 +153,6 @@ end
 
 --========================================================================--
 
-function os.capture(cmd)
-   -- Read the output of a system command
-   -- cmd   : command to be executed
-   local f = assert(io.popen(cmd, 'r'))
-   local s = assert(f:read('*a'))
-   f:close()
-   s = string.gsub(s, '^%s+', '')
-   s = string.gsub(s, '%s+$', '')
-   s = string.gsub(s, '[\n\r]+', ' ')
-   return s
-end
-
---========================================================================--
-
-function test_execution(cmd)
-   -- Return true if the command returns successfully
-   -- cmd   : command to be executed
-   local result = os.execute(cmd)
-   local final_result = false
-   if _VERSION == 'Lua 5.2'
-   then
-      final_result = result
-   else
-      final_result = ( result == 0 )
-   end
-   return final_result
-end
-
---========================================================================--
-
 function to_minute(inputstr)
    -- convert SLURM time format in minute :
    -- inpustr : string should looks like :
@@ -244,14 +217,14 @@ function build_qos_list ()
    local qos_partition
    local qos_file
 
-   qos_file = io.open (QOS_CONF, "r")
-   if qos_file == nil then
-      -- Read informations from sacctmgr command
-      qos_rec = assert (io.popen ("sacctmgr --noheader --parsable show qos format=\"Name,MaxWall,MaxCPUs\" | sort -t'_' -d -k 2 -k 1"))
-   else
-      -- Read qos_conf file
-      qos_rec = assert (io.popen ("cat " .. QOS_CONF))
+   if not file_exists(QOS_CONF) then
+      slurm.log_info("build_qos_list: qos file %s does not exist, failed to build QOS list",
+                     QOS_CONF)
+      return nil
    end
+
+   -- Read qos_conf file
+   qos_rec = assert (io.open (QOS_CONF, 'r'))
 
    for line in qos_rec:lines() do
       local t = {}
@@ -288,6 +261,8 @@ function build_qos_list ()
       end
    end -- for loop
 
+   io.close(qos_rec)
+
    -- Sort  all tables
    if qos_list ~= nil then
       -- table.sort(qos_list, function(a,b) return a < b end) -- sort qos (optional)
@@ -302,46 +277,64 @@ function build_qos_list ()
          end
       end
    end
-   io.close(qos_rec)
+
    return qos_list, qos_accounts
+
 end
 
-function track_wckey (job_desc, part_list, submit_uid)
-   local username
-   local cmd = "getent passwd " .. submit_uid .. "| awk -F':' '{print tolower($1)}'"
-   username = os.capture(cmd) -- convert uid to logname
-   wckey_conf = io.open (WCKEY_CONF_FILE, "r")
-   user_exception = io.open (WCKEY_USER_EXCEPTION_FILE, "r")
+-- see if the file exists
+function file_exists(file)
+   local f = io.open(file, "rb")
+   if f then f:close() end
+   return f ~= nil
+end
 
-   if wckey_conf ~= nil then
-      if job_desc.wckey == nil then
-         if user_exception ~= nil then
-            local exep_check = "grep -i -q -x " .. username .. " " .. WCKEY_USER_EXCEPTION_FILE
-            if test_execution(exep_check) then
-               slurm.log_info("slurm_wckey_exeption: job from user:%s/%u without wckey.", username, submit_uid)
-               return 0
-            end
-         end
-         slurm.log_info("slurm_job_modify: job from user:%s/%u didn't specify any valid wckey.", username, submit_uid)
-         return ESLURM_INVALID_WCKEY
-      else
-         -- Convert wckey to lowercase  --
-         if job_desc.wckey ~= nil then
-            job_desc.wckey = string.lower(job_desc.wckey)
-         end
-         local wc_check = "grep -q -x " .. job_desc.wckey .. " " .. WCKEY_CONF_FILE
-         slurm.log_info("slurm_job_modify: job from user:%s/%u searching wckey %s", username, submit_uid, wc_check)
-         if test_execution(wc_check) then
-            slurm.log_info("slurm_job_modify: job from user:%s/%u with wckey=%s.", username, submit_uid, showstring(job_desc.wckey))
+-- search for line in file, return true if present, false otherwise
+function line_present(file, search)
+   for line in io.lines(file) do
+      if search == line then
+         return true
+      end
+  end
+  return false
+end
+
+-- check wckey among WCKEY_CONF_FILE and WCKEY_USER_EXCEPTION_FILE
+function track_wckey (job_desc, part_list, submit_uid, username)
+
+   -- if WCKEY_CONF_FILE does not exist, return OK
+   if not file_exists(WCKEY_CONF_FILE) then
+     return 0
+   end
+
+   if job_desc.wckey == nil then
+      if file_exists(WCKEY_USER_EXCEPTION_FILE) then
+         if line_present(WCKEY_USER_EXCEPTION_FILE, username) then
+            slurm.log_info("track_wckey: job from user:%s/%u has a valid wckey exception.",
+                           username, submit_uid)
             return 0
-         else
-            slurm.log_info("slurm_job_modify: job from user:%s/%u did specify an invalid wckey:%s", username, submit_uid, showstring(job_desc.wckey))
-            return ESLURM_INVALID_WCKEY
          end
       end
+      -- if WCKEY_USER_EXCEPTION_FILE does not exist or username name not found, return wckey error
+      slurm.log_info("track_wckey: job from user:%s/%u didn't specify any valid wckey.",
+                     username, submit_uid)
+      return ESLURM_INVALID_WCKEY
    else
-      return 0
+     -- Convert wckey to lowercase  --
+     job_desc.wckey = string.lower(job_desc.wckey)
+     if line_present(WCKEY_CONF_FILE, job_desc.wckey) then
+        -- wckey present in file, return OK
+        slurm.log_info("track_wckey: job from user:%s/%u with wckey=%s.",
+                       username, submit_uid, showstring(job_desc.wckey))
+        return 0
+     else
+        -- wckey not found, return wckey error
+        slurm.log_info("track_wckey: job from user:%s/%u did specify an invalid wckey:%s",
+                       username, submit_uid, showstring(job_desc.wckey))
+        return ESLURM_INVALID_WCKEY
+     end
    end
+
 end
 
 
@@ -352,17 +345,22 @@ end
 --########################################################################--
 
 function slurm_job_submit ( job_desc, part_list, submit_uid )
-   status = track_wckey(job_desc, part_list, submit_uid)
+
+   username = job_desc.user_name
+
+   status = track_wckey(job_desc, part_list, submit_uid, username)
    if status ~= 0 then
       return status
    end
 
-   local username
    local qos_list, qos_accounts = build_qos_list()
+   -- if unable to build QOS list, return ESLURM_INVALID_QOS
+   if qos_list == nil then
+      return ESLURM_INVALID_QOS
+   end
+
    local maxtime
    local maxcpus
-   local cmd =  "getent passwd " .. submit_uid .. "| awk -F':' '{print tolower($1)}'"
-   username = os.capture(cmd) -- convert uid to logname
 
    -- QOS set by user. In this case, the script simply sets the partition
    -- accordingly.
@@ -420,8 +418,15 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
       -- value to user's default account for later processing.
       if ENFORCE_ACCOUNT then
           if job_desc.account == nil then
-             slurm.log_info("slurm_job_submit: no account specified by user %s, using default account %s.", username, job_desc.default_account)
-             job_desc.account = job_desc.default_account
+             if job_desc.default_account == nil then
+                slurm.log_info("slurm_job_submit: user %s has no default account, unable to assign default account.",
+                               username)
+                return ESLURM_INVALID_ACCOUNT
+             else
+                slurm.log_info("slurm_job_submit: no account specified by user %s, using default account %s.",
+                               username, job_desc.default_account)
+                job_desc.account = job_desc.default_account
+             end
           else
              slurm.log_info("slurm_job_submit: account %s specified by user %s.", job_desc.account, username)
           end

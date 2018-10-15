@@ -36,6 +36,7 @@ Depends:
  ${shlibs:Depends},
  ${misc:Depends},
  slurm-wlm-basic-plugins (>= 14.11),
+ slurm-llnl-setup-wckeys (>= 0.7.11),
  python
 Description: Lua plugin for routing jobs in approriate defined QOSes
  This package provides a lua script for routing jobs in appropriate QOSes
@@ -66,6 +67,20 @@ Description: MySQL setup script for SlurmDBD
  databases and gives all needed grants to the slurm user of SlurmDBD. It is
  designed to be idempotent by doing only what is needed. This makes it
  eventually usable within Puppet manifests for instance.
+
+Package: slurm-llnl-setup-wckeys
+Architecture: all
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+ curl,
+ dos2unix
+Breaks: slurm-llnl-job-submit-plugin (<< 0.7.13)
+Replaces: slurm-llnl-job-submit-plugin (<< 0.7.13)
+Description: Wcceys setup script for SlurmDBD
+ This package provides a Shell script which add wckeys into Slurmdbd 
+ database. It assembles codes (one by one) from 2 files to create a
+ wckey and insert it into the slurm database.
 
 Package: slurm-llnl-sync-accounts
 Architecture: all

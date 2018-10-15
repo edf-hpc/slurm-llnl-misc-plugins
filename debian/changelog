@@ -1,3 +1,12 @@
+slurm-llnl-misc-plugins (0.8.0) calibre9; urgency=medium
+
+  * job_submit.lua: remove getent to get username
+  * job_submit.lua: replace grep with Lua stdlib io
+  * job_submit.lua: replace cat + remove sacctmgr
+  * job_submit.lua: handle unexiting account
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Mon, 15 Oct 2018 10:17:27 +0200
+
 slurm-llnl-misc-plugins (0.7.16) calibre9; urgency=medium
 
   * Ensure the files are in ASCII unix mode before operating on it

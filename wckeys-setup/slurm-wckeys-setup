@@ -80,6 +80,7 @@ do
   if [ -f "${CODES_PROJETS_FILE_CURRENT}" ]
   then
     ((nb++))
+    /usr/bin/dos2unix ${CODES_PROJETS_FILE_CURRENT}
     CODES_PROJETS_LIST=$(awk -F';' '{print tolower($1)}' ${CODES_PROJETS_FILE_CURRENT} | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u)
     CODES_METIERS_ENTRY=$(echo ${CODES_FILE} | cut -f${nb} -d" ")
     print_msg "Retrieve METIERS file ${iteration}"
@@ -92,6 +93,7 @@ do
     fi
     if [ -f "${CODES_METIERS_FILE_CURRENT}" ]
     then
+      /usr/bin/dos2unix ${CODES_METIERS_FILE_CURRENT}
       CODES_METIERS_LIST=$(iconv -f 437 -t ascii//TRANSLIT ${CODES_METIERS_FILE_CURRENT} | \
       awk -F';' '{gsub (/[ )]$/, "", $1 ); print tolower($1)}' | \
       tr '[:blank:]' '_' | sed -r -e 's/[_]+/_/g' -e 's/^[_]+//g' -e 's/[_]+$//g' | sort -u)

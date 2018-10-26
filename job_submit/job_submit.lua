@@ -447,19 +447,21 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
 
                         if qos_list[part][maxcpus] ~= nil then
                            for k, qos_maxtime in ipairs(qos_list[part][maxcpus]) do
-                              if job_desc.time_limit <= tonumber(qos_maxtime) then
+                              if qos_maxtime == nil then
+                                 if job_desc.time_limit <= tonumber(qos_maxtime) then
 
-                                 for l, qos_name in ipairs(qos_list[part][maxcpus][qos_maxtime]) do
-                                     -- check the job account is allowed in qos accounts if ENFORCE_ACCOUNT is true
-                                     if not ENFORCE_ACCOUNT or has_value(qos_accounts[qos_name], job_desc.account) then
-                                        found_qos_name = qos_name
-                                        -- break loop on qos_names
-                                        break
-                                     end
-                                 end
-                                 if found_qos_name ~= nil then
-                                    -- break loop on qos_maxtime
-                                    break
+                                    for l, qos_name in ipairs(qos_list[part][maxcpus][qos_maxtime]) do
+                                       -- check the job account is allowed in qos accounts if ENFORCE_ACCOUNT is true
+                                       if not ENFORCE_ACCOUNT or has_value(qos_accounts[qos_name], job_desc.account) then
+                                          found_qos_name = qos_name
+                                          -- break loop on qos_names
+                                          break
+                                       end
+                                    end
+                                    if found_qos_name ~= nil then
+                                       -- break loop on qos_maxtime
+                                       break
+                                    end
                                  end
                               end
                            end

@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.8.1sci9u1) scibian9; urgency=medium
+
+  * correct job_submit.lua when qos_maxtime is not set 
+
+ -- Nicolas Meaux <nicolas-externe.meaux@edf.fr>  Fri, 26 Oct 2018 15:14:56 +0200
+
 slurm-llnl-misc-plugins (0.8.0sci9u1) scibian9; urgency=medium
 
   * Scibian 9 rebuild

@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.8.2sci9u1) scibian9; urgency=medium
+
+  * correct a problem in build_qos_list by setting qos_maxtime to infinite when this variable is not define & revert aad218d355
+
+ -- Nicolas Meaux <nicolas-externe.meaux@edf.fr>  Fri, 09 Nov 2018 17:19:36 +0100
+
 slurm-llnl-misc-plugins (0.8.1sci9u1) scibian9; urgency=medium
 
   * correct job_submit.lua when qos_maxtime is not set 

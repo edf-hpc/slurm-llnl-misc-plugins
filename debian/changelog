@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.8.3) calibre9; urgency=medium
+
+  * correct a bug introduce by 0e2b780d6ac1 
+
+ -- Nicolas Meaux <nicolas-externe.meaux@edf.fr>  Tue, 13 Nov 2018 11:27:06 +0100
+
 slurm-llnl-misc-plugins (0.8.2) calibre9; urgency=medium
 
   * new release to be in sync with scibian repo 

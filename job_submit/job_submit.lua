@@ -240,7 +240,7 @@ function build_qos_list ()
          accounts = split(t[4], ACCOUNTS_SEP)
       end
 
-      if qos_duration == nil
+      if qos_duration == nil then
          qos_duration=to_minute(4000000000)
       fi
 

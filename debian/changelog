@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.8.4sci9u1) scibian9; urgency=medium
+
+  * correct an other bug introduce by aa98ae17 
+
+ -- Nicolas Meaux <nicolas-externe.meaux@edf.fr>  Tue, 13 Nov 2018 13:09:24 +0100
+
 slurm-llnl-misc-plugins (0.8.3sci9u1) scibian9; urgency=medium
 
   * correct a bug introduce by aa98ae17 

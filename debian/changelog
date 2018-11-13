@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.8.3sci9u1) scibian9; urgency=medium
+
+  * correct a bug introduce by aa98ae17 
+
+ -- Nicolas Meaux <nicolas-externe.meaux@edf.fr>  Tue, 13 Nov 2018 11:23:27 +0100
+
 slurm-llnl-misc-plugins (0.8.2sci9u1) scibian9; urgency=medium
 
   * correct a problem in build_qos_list by setting qos_maxtime to infinite when this variable is not define & revert aad218d355

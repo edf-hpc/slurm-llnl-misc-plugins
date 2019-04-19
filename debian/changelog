@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.9.0sci9u1) scibian9; urgency=medium
+
+  * New upstream 0.9.0
+
+ -- Thomas HAMEL <thomas-externe.hamel@edf.fr>  Fri, 19 Apr 2019 10:34:16 +0200
+
 slurm-llnl-misc-plugins (0.9.0) unstable; urgency=medium
 
   * sync-accounts: allow multiple groups per accounts

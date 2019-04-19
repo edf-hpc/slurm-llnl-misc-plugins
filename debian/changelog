@@ -1,3 +1,33 @@
+slurm-llnl-misc-plugins (0.9.0) unstable; urgency=medium
+
+  * sync-accounts: allow multiple groups per accounts
+
+ -- Thomas HAMEL <thomas-externe.hamel@edf.fr>  Thu, 18 Apr 2019 18:19:14 +0200
+
+slurm-llnl-misc-plugins (0.8.4) calibre9; urgency=medium
+
+  * correct an other bug introduce by 0e2b780d6ac1 
+
+ -- Nicolas Meaux <nicolas-externe.meaux@edf.fr>  Tue, 13 Nov 2018 13:07:48 +0100
+
+slurm-llnl-misc-plugins (0.8.3) calibre9; urgency=medium
+
+  * correct a bug introduce by 0e2b780d6ac1 
+
+ -- Nicolas Meaux <nicolas-externe.meaux@edf.fr>  Tue, 13 Nov 2018 11:27:06 +0100
+
+slurm-llnl-misc-plugins (0.8.2) calibre9; urgency=medium
+
+  * new release to be in sync with scibian repo 
+
+ -- Nicolas Meaux <nicolas-externe.meaux@edf.fr>  Fri, 09 Nov 2018 17:35:53 +0100
+
+slurm-llnl-misc-plugins (0.8.1) calibre9; urgency=medium
+
+  * job_submit.lua: correct a problem in build_qos_list by setting qos_maxtime to infinite when this variable is not define
+
+ -- Nicolas Meaux <nicolas-externe.meaux@edf.fr>  Fri, 09 Nov 2018 16:56:41 +0100
+
 slurm-llnl-misc-plugins (0.8.0) calibre9; urgency=medium
 
   * job_submit.lua: remove getent to get username

@@ -146,10 +146,18 @@ class Conf(object):
                 if section.startswith(prefix):
                     acct_name = section[len(prefix):]
                     desc = parser.get(section, 'desc')
-                    group = parser.get(section, 'group')
-                    logger.debug("account %s for group %s",
-                                 acct_name, group)
-                    self.accounts.append(Account(acct_name, desc, [ group ]))
+                    # check deprecated group parameter
+                    if not parser.has_option(section, 'groups') and \
+                       parser.has_option(section,'group'):
+                        logger.error("%s/group parameter is deprecated, "
+                                     "use %s/groups instead", section, section)
+                        groups = [ parser.get(section, 'group') ]
+                    else:
+                        groups = parser.get(section, 'groups').split(',')
+
+                    logger.debug("account %s for groups %s",
+                                 acct_name, str(groups))
+                    self.accounts.append(Account(acct_name, desc, groups))
 
         try:
             user_opts = parser.get('main', 'user_add_opts')

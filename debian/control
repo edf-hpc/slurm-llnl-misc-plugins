@@ -116,3 +116,14 @@ Depends:
 Description: Wrapper to stop node by SSH
  This package provides a simple Python script utility to poweroff or suspend
  a compute node through SSH with a dedicated public key.
+
+Package: slurm-admin-utils
+Architecture: all
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+ clustershell,
+ python-pyslurm,
+Description: Utilities for administrating Slurm clusters
+ This package provides a set of utilities for administrating Slurm on HPC
+ clusters.

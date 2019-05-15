@@ -1,0 +1,2 @@
+admin-utils/slurm-check-procs-nojob usr/sbin
+admin-utils/node-list-procs usr/lib/slurm/exec

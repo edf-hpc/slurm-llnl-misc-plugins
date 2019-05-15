@@ -1,0 +1,133 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# Copyright (C) 2019 EDF SA
+#
+# Authors: CCN - HPC <dsp-cspit-ccn-hpc@edf.fr>
+#
+# This file is part of slurm-llnl-misc-plugins
+#
+# scibian-build-tools is free software: you can redistribute it
+# and/or modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# scibian-build-tools is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with scibian-build-tools.  If not, see
+# <http://www.gnu.org/licenses/>.
+
+import sys
+import json
+import pyslurm
+import pwd
+from ClusterShell.NodeSet import NodeSet
+from ClusterShell.Task import task_self
+from ClusterShell.Event import EventHandler
+from ClusterShell.Worker.Ssh import WorkerSsh
+
+
+
+class ProcsEventHandler(EventHandler):
+
+    def __init__(self, nodes_users):
+        self.nodes_users = nodes_users
+
+    def ev_read(self, worker):
+
+        users_procs = json.loads(worker.current_msg)
+        node = worker.current_node
+        header_print = False
+
+        for uid_s, procs in users_procs.iteritems():
+            uid = int(uid_s)
+
+            if node not in self.nodes_users or uid not in self.nodes_users[node]:
+                if not header_print:
+                    print("--- node %s" % node)
+                    header_print = True
+
+                print(" weird processes from UID %d [%s]:" \
+                      % (uid, get_user_name(uid)))
+                for proc in procs:
+                    print("  - %d %s" % (int(proc[0]), proc[1]))
+            #else:
+            #    print("legitimate processes for UID %d [%s] on node %s" \
+            #          % (uid, get_user_name(uid), node))
+
+    def ev_hup(self, worker):
+        if worker.current_rc != 0:
+            print("%s: returned with error code %s" \
+                  % (worker.current_node,
+                     worker.current_rc))
+
+    def ev_timeout(self, worker):
+        print("timeout on nodes: %s" \
+              % (str(NodeSet.fromlist(worker.iter_keys_timeout()))))
+
+
+def get_user_name(uid):
+
+     return pwd.getpwuid(uid)[0]
+
+
+def get_nodes_users(target_nodes):
+    """Return a dict with nodenames in keys and list of users UID having jobs
+       on this node as values."""
+    nodes_users = {}
+
+    jobs = pyslurm.job().get()
+    for jobid in jobs.iterkeys():
+        job_nodes = NodeSet(jobs[jobid]['nodes'])
+        for node in job_nodes:
+            if node in target_nodes:
+                if node not in nodes_users:
+                    nodes_users[node] = []
+                nodes_users[node].append(jobs[jobid]['user_id'])
+
+    return nodes_users
+
+
+def get_nodes_weird_procs(target_nodes, nodes_users, excluded_uids):
+    """Propagate and run external Python script on nodes to extract remote
+       processes, compare to expected UIDs per nodes provided in nodes_users
+       and print result."""
+
+    task = task_self()
+    cmd = "python - %s" % (excluded_uids)
+    worker = WorkerSsh(target_nodes,
+                       handler=ProcsEventHandler(nodes_users),
+                       timeout=10,
+                       command=cmd)
+
+    script_c = None
+    with open('/usr/lib/slurm/exec/node-list-procs') as script_fh:
+        script_c = script_fh.read()
+    worker.write(script_c)
+    worker.set_write_eof()
+    task.schedule(worker)
+    task.resume()
+
+
+def main():
+
+    if len(sys.argv) < 2:
+        print("usage: %s NODESET [EXCLUDED_UID]" % (sys.argv[0]))
+        sys.exit(1)
+
+    excluded_uids = ''
+    if len(sys.argv) >= 3:
+        excluded_uids = sys.argv[2]
+
+    nodeset_s = sys.argv[1]
+    nodeset = NodeSet(nodeset_s)
+    nodes_users = get_nodes_users(nodeset)
+    get_nodes_weird_procs(nodeset, nodes_users, excluded_uids)
+
+
+if __name__ == '__main__':
+    main()

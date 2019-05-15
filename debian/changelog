@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.11.0sci8u1) scibian8; urgency=medium
+
+  * New upstream 0.11.0
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Wed, 15 May 2019 12:21:26 +0200
+
 slurm-llnl-misc-plugins (0.11.0) unstable; urgency=medium
 
   * admin-utils: introduce slurm-check-procs-nojob

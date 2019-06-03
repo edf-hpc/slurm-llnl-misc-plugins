@@ -39,8 +39,15 @@ class ProcsEventHandler(EventHandler):
 
     def ev_read(self, worker):
 
-        users_procs = json.loads(worker.current_msg)
         node = worker.current_node
+
+        try:
+            users_procs = json.loads(worker.current_msg)
+        except ValueError, e:
+            # no json means error on remote node, it is catched by ev_hup()
+            # eventually
+            return
+
         header_print = False
 
         for uid_s, procs in users_procs.iteritems():

@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.11.1sci8u1) scibian8; urgency=medium
+
+  * New upstream 0.11.1
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Mon, 03 Jun 2019 11:25:22 +0200
+
 slurm-llnl-misc-plugins (0.11.1) unstable; urgency=medium
 
   * admin-utils: do not json decode failing nodes

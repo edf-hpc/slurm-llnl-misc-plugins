@@ -1,3 +1,29 @@
+slurm-llnl-misc-plugins (0.11.1sci9u1) scibian9; urgency=medium
+
+  * New upstream 0.11.1
+
+ -- Nicolas COUDENE <nicolas-externe.coudene@edf.fr>  Wed, 05 Jun 2019 08:06:00 +0200
+
+slurm-llnl-misc-plugins (0.11.1) unstable; urgency=medium
+
+  * admin-utils: do not json decode failing nodes
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Mon, 03 Jun 2019 11:20:12 +0200
+
+slurm-llnl-misc-plugins (0.11.0) unstable; urgency=medium
+
+  * admin-utils: introduce slurm-check-procs-nojob
+  * introduce new binary package slurm-admin-utils
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Wed, 15 May 2019 12:14:11 +0200
+
+slurm-llnl-misc-plugins (0.10.0) unstable; urgency=medium
+
+  * genscripts: replace squeue with cpuset check
+  * genscripts: log pkill count in clean epilog
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Fri, 10 May 2019 10:32:35 +0200
+
 slurm-llnl-misc-plugins (0.9.0sci9u1) scibian9; urgency=medium
 
   * New upstream 0.9.0

@@ -129,3 +129,13 @@ Depends:
 Description: Utilities for administrating Slurm clusters
  This package provides a set of utilities for administrating Slurm on HPC
  clusters.
+
+Package: slurm-unkstep-program
+Architecture: all
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+ clustershell,
+ python-pyslurm,
+Description: Utility for administrating Slurm clusters
+ This package provides a Slurm step program that logs all users processes in syslog.

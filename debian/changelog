@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (0.11.2sci9u1) scibian9; urgency=medium
+
+  * New upstream 0.11.2
+
+ -- MHamed Bouaziz <mhamed-externe.bouaziz@edf.fr>  Wed, 19 Jun 2019 15:30:09 +0200
+
 slurm-llnl-misc-plugins (0.11.2) unstable; urgency=medium
 
   * admin-utils: add new admin script to manage kill task failled in slurmd nodes

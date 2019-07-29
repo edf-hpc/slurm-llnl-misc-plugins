@@ -1,0 +1,248 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# Copyright (C) 2019 EDF SA
+#
+# Authors: CCN - HPC <dsp-cspit-ccn-hpc@edf.fr>
+#
+# This file is part of slurm-llnl-misc-plugins
+#
+# scibian-build-tools is free software: you can redistribute it
+# and/or modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# scibian-build-tools is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with scibian-build-tools.  If not, see
+# <http://www.gnu.org/licenses/>.
+
+import time
+import json
+import argparse
+import pwd
+import sys
+import pyslurm
+import yaml
+import ClusterShell
+from ClusterShell.NodeSet import NodeSet
+from ClusterShell.Task import task_self
+from ClusterShell.Event import EventHandler
+from ClusterShell.Worker.Ssh import WorkerSsh
+
+class CgroupsEventHandler(EventHandler):
+
+    def __init__(self):
+        self.cgroups_by_nodes = {}
+
+    def ev_read(self, worker):
+
+        node = worker.current_node
+
+        try:
+            users_cgroups = json.loads(worker.current_msg)
+        except ValueError:
+            # no json means error on remote node, it is catched by ev_hup()
+            # eventually
+            return
+
+        for uid_s, cgroups in users_cgroups.iteritems():
+            uid = int(uid_s)
+
+            if not node in self.cgroups_by_nodes.keys():
+                self.cgroups_by_nodes[node] = {}
+
+            if not uid in self.cgroups_by_nodes[node].keys():
+                self.cgroups_by_nodes[node][uid] = []
+
+            for cgroup in cgroups:
+                jobid = cgroup[0]
+                steplist = cgroup[1]
+                self.cgroups_by_nodes[node][uid].append((jobid, steplist))
+
+    def ev_hup(self, worker):
+        if worker.current_rc != 0:
+            sys.stderr.write("%s: returned with error code %s\n" %
+                             (worker.current_node, worker.current_rc))
+
+    def ev_timeout(self, worker):
+        sys.stderr.write("timeout on nodes: %s\n" %
+                         (str(NodeSet.fromlist(worker.iter_keys_timeout()))))
+
+
+def get_user_name(uid):
+    return pwd.getpwuid(uid)[0]
+
+
+def get_nodes_users_jobs(target_nodes):
+    """Return a dict with nodenames in keys and list of users UID having jobs
+       on this node as values."""
+    nodes_users_jobs = {}
+
+    jobs = pyslurm.job().get()
+    for jobid in jobs.iterkeys():
+        job_nodes = NodeSet(jobs[jobid]['nodes'])
+        for node in job_nodes:
+            if node in target_nodes:
+                if node not in nodes_users_jobs:
+                    nodes_users_jobs[node] = {}
+
+                user_id = jobs[jobid]['user_id']
+                if user_id not in nodes_users_jobs[node]:
+                    nodes_users_jobs[node][user_id] = []
+
+                nodes_users_jobs[node][user_id].append(jobid)
+
+    return nodes_users_jobs
+
+
+def get_nodes_cgroups(target_nodes,
+                      excluded_uids,
+                      helper_path):
+    """Propagate and run external Python script on nodes to extract remote
+       slurm cgroups, compare to expected UIDs per nodes provided in
+       nodes_users and print result."""
+
+    task = task_self()
+    cmd = "python - %s" % (excluded_uids)
+
+    event_handler = CgroupsEventHandler()
+    worker = WorkerSsh(target_nodes,
+                       handler=event_handler,
+                       timeout=10,
+                       command=cmd)
+
+    script_c = None
+    with open(helper_path) as script_fh:
+        script_c = script_fh.read()
+    worker.write(script_c)
+    worker.set_write_eof()
+    task.schedule(worker)
+    task.resume()
+    return event_handler.cgroups_by_nodes
+
+
+def parse_args():
+    """Parse arguments with the argparse plugin and returns the
+       parse_args output"""
+    conf = {}
+    parser = argparse.ArgumentParser(
+        description="""Connects to nodeset and list job cgroups that should not
+                       be there anymore. The connection is made twice with a
+                       default delay between tries. cgroups not appearing in
+                       both tries is not displayed. This avoid displaying
+                       transient groups that could be false positive.
+
+                       by default the script launched on the node is taken from
+                       /usr/lib/slurm/exec.
+
+                       By default, the output is a yaml structure :
+                       node:
+                         uid:
+                           jobid: stepA[,stepB...]
+
+                       If the nodes-only parameter is passed, the output is just
+                       a list of nodes."""
+    )
+    parser.add_argument('nodeset')
+    parser.add_argument('excluded_uids', nargs='?', default='')
+    parser.add_argument('--helper-path', nargs='?',
+                        default='/usr/lib/slurm/exec/node-list-cgroups')
+    parser.add_argument('--delay', nargs='?',
+                        default=60, type=int)
+    parser.add_argument('--nodes-only', action='store_true', default=False)
+    conf = parser.parse_args()
+    return conf
+
+
+def print_groups_intersection(cgroups_a,
+                              cgroups_b,
+                              nodes_users_jobs,
+                              output_format=None):
+    """Prints the content of the intersection of two cgroups data, the
+       content is filtered with the nodes_users_jobs dict that contains the
+       running jobs per user and per node.
+
+       if output_format the "nodes_only" member of the output_format dict is
+       True, only the nodeset is displayed.
+
+       Else a Yaml dump is printed."""
+    if output_format is None:
+        output_format = {}
+
+    nodes_only = False
+    if 'nodes_only' in output_format:
+        nodes_only = output_format['nodes_only']
+
+    output = {}
+
+    a_nodes = cgroups_a.keys()
+    b_nodes = cgroups_b.keys()
+    common_nodes = list(set(a_nodes).intersection(set(b_nodes)))
+    common_nodes.sort()
+
+    for node in common_nodes:
+
+        a_uids = cgroups_a[node].keys()
+        b_uids = cgroups_b[node].keys()
+        common_uid = list(set(a_uids).intersection(set(b_uids)))
+        common_uid.sort()
+
+        for uid in common_uid:
+
+            a_jobs = cgroups_a[node][uid]
+            b_jobs = cgroups_b[node][uid]
+            common_jobs = list(set(a_jobs).intersection(set(b_jobs)))
+            common_jobs.sort()
+
+            for jobid, steplist in common_jobs:
+                if node in nodes_users_jobs \
+                        and uid in nodes_users_jobs[node] \
+                        and int(jobid) in map(int, nodes_users_jobs[node][uid]):
+                    sys.stderr.write("%s/%s/%s is OK\n" % (node, uid, jobid))
+                    continue
+
+                if node not in output:
+                    output[node] = {}
+
+                if uid not in output[node]:
+                    output[node][uid] = {}
+
+                output[node][uid][jobid] = steplist
+
+    if nodes_only:
+        nodelist = ','.join(output.keys())
+        if nodelist != "":
+            print ClusterShell.NodeSet.fold(nodelist)
+        return
+
+    print yaml.safe_dump(output, default_flow_style=False)
+
+def main():
+    conf = parse_args()
+
+    output_format = {'nodes_only': conf.nodes_only}
+
+    excluded_uids = conf.excluded_uids
+    nodeset_s = conf.nodeset
+    helper_path = conf.helper_path
+    nodeset = NodeSet(nodeset_s)
+    nodes_users_jobs = get_nodes_users_jobs(nodeset)
+    cgroups_a = get_nodes_cgroups(nodeset, excluded_uids, helper_path)
+    if conf.delay > 0:
+        time.sleep(conf.delay)
+        cgroups_b = get_nodes_cgroups(nodeset, excluded_uids, helper_path)
+    else:
+        cgroups_b = cgroups_a
+
+    print_groups_intersection(cgroups_a,
+                              cgroups_b,
+                              nodes_users_jobs,
+                              output_format)
+
+if __name__ == '__main__':
+    main()

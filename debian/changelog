@@ -1,8 +1,24 @@
+slurm-llnl-misc-plugins (1.0.0) unstable; urgency=medium
+
+  * admin-utils: Add slurm-check-cgroups-nojob
+  * admin-utils: remove NUL char from node-list-procs
+  * admin-utils nodes-only to slurm-check-procs-nojob
+  * debian: add cgroups script to slurm-admin-utils
+  * Bump to 1.0.0
+
+ -- Thomas HAMEL <thomas-t.hamel@edf.fr>  Tue, 20 Aug 2019 13:50:12 +0200
+
 slurm-llnl-misc-plugins (0.11.3sci9u1) scibian9; urgency=medium
 
   * New version 0.11.3sci9u1 
 
  -- MHamed Bouaziz <mhamed-externe.bouaziz@edf.fr>  Wed, 24 Jul 2019 14:52:30 +0200
+
+slurm-llnl-misc-plugins (0.11.3) unstable; urgency=medium
+
+  * New upstream 0.11.3
+
+ -- MHamed Bouaziz <mhamed-externe.bouaziz@edf.fr>  Wed, 24 Jul 2019 14:26:40 +0200
 
 slurm-llnl-misc-plugins (0.11.2sci9u2) scibian9; urgency=medium
 

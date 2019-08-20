@@ -1,2 +1,4 @@
 admin-utils/slurm-check-procs-nojob usr/sbin
+admin-utils/slurm-check-cgroups-nojob usr/sbin
 admin-utils/node-list-procs usr/lib/slurm/exec
+admin-utils/node-list-cgroups usr/lib/slurm/exec

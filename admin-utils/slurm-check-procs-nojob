@@ -23,19 +23,20 @@
 
 import sys
 import json
-import pyslurm
 import pwd
+import argparse
+import pyslurm
+import ClusterShell
 from ClusterShell.NodeSet import NodeSet
 from ClusterShell.Task import task_self
 from ClusterShell.Event import EventHandler
 from ClusterShell.Worker.Ssh import WorkerSsh
 
 
-
 class ProcsEventHandler(EventHandler):
 
-    def __init__(self, nodes_users):
-        self.nodes_users = nodes_users
+    def __init__(self):
+        self.procs_by_nodes = {}
 
     def ev_read(self, worker):
 
@@ -43,43 +44,38 @@ class ProcsEventHandler(EventHandler):
 
         try:
             users_procs = json.loads(worker.current_msg)
-        except ValueError, e:
+        except ValueError:
             # no json means error on remote node, it is catched by ev_hup()
             # eventually
             return
 
-        header_print = False
-
         for uid_s, procs in users_procs.iteritems():
             uid = int(uid_s)
 
-            if node not in self.nodes_users or uid not in self.nodes_users[node]:
-                if not header_print:
-                    print("--- node %s" % node)
-                    header_print = True
+            if node not in self.procs_by_nodes.keys():
+                self.procs_by_nodes[node] = {}
 
-                print(" weird processes from UID %d [%s]:" \
-                      % (uid, get_user_name(uid)))
-                for proc in procs:
-                    print("  - %d %s" % (int(proc[0]), proc[1]))
-            #else:
-            #    print("legitimate processes for UID %d [%s] on node %s" \
-            #          % (uid, get_user_name(uid), node))
+            if uid not in self.procs_by_nodes[node].keys():
+                self.procs_by_nodes[node][uid] = []
+
+            for proc in procs:
+                pid = proc[0]
+                commandline = proc[1]
+                self.procs_by_nodes[node][uid].append((pid, commandline))
 
     def ev_hup(self, worker):
         if worker.current_rc != 0:
-            print("%s: returned with error code %s" \
-                  % (worker.current_node,
-                     worker.current_rc))
+            sys.stderr.write("%s: returned with error code %s\n" %
+                             (worker.current_node, worker.current_rc))
 
     def ev_timeout(self, worker):
-        print("timeout on nodes: %s" \
-              % (str(NodeSet.fromlist(worker.iter_keys_timeout()))))
+        sys.stderr.write("timeout on nodes: %s\n" %
+                         (str(NodeSet.fromlist(worker.iter_keys_timeout()))))
 
 
 def get_user_name(uid):
 
-     return pwd.getpwuid(uid)[0]
+    return pwd.getpwuid(uid)[0]
 
 
 def get_nodes_users(target_nodes):
@@ -99,41 +95,87 @@ def get_nodes_users(target_nodes):
     return nodes_users
 
 
-def get_nodes_weird_procs(target_nodes, nodes_users, excluded_uids):
+def get_nodes_weird_procs(target_nodes,
+                          excluded_uids,
+                          helper_path):
     """Propagate and run external Python script on nodes to extract remote
        processes, compare to expected UIDs per nodes provided in nodes_users
        and print result."""
 
     task = task_self()
     cmd = "python - %s" % (excluded_uids)
+    event_handler = ProcsEventHandler()
     worker = WorkerSsh(target_nodes,
-                       handler=ProcsEventHandler(nodes_users),
+                       handler=event_handler,
                        timeout=10,
                        command=cmd)
 
     script_c = None
-    with open('/usr/lib/slurm/exec/node-list-procs') as script_fh:
+    with open(helper_path) as script_fh:
         script_c = script_fh.read()
     worker.write(script_c)
     worker.set_write_eof()
     task.schedule(worker)
     task.resume()
+    return event_handler.procs_by_nodes
+
+def print_procs(procs_by_nodes, nodes_users, output_format=None):
+    if output_format is None:
+        output_format = {}
+
+    nodes_only = False
+    if 'nodes_only' in output_format:
+        nodes_only = output_format['nodes_only']
+
+
+    matching_nodes = []
+    for node, users_procs in procs_by_nodes.iteritems():
+
+        for uid_s, procs in users_procs.iteritems():
+            uid = int(uid_s)
+
+            if node not in nodes_users or uid not in nodes_users[node]:
+                if node not in matching_nodes:
+                    matching_nodes.append(node)
+                    if not nodes_only:
+                        print "--- node %s" % node
+
+                if not nodes_only:
+                    print " weird processes from UID %d [%s]:" \
+                        % (uid, get_user_name(uid))
+                    for proc in procs:
+                        print "  - %d %s" % (int(proc[0]), proc[1])
+
+    if nodes_only:
+        nodelist = ','.join(matching_nodes)
+        if nodelist != "":
+            print ClusterShell.NodeSet.fold(nodelist)
+
+def parse_args():
+    conf = {}
+    parser = argparse.ArgumentParser()
+    parser.add_argument('nodeset')
+    parser.add_argument('excluded_uids', nargs='?', default='')
+    parser.add_argument('--helper-path', nargs='?',
+                        default='/usr/lib/slurm/exec/node-list-procs')
+    parser.add_argument('--summary', action='store_true', default=False)
+    parser.add_argument('--nodes-only', action='store_true', default=False)
+    conf = parser.parse_args()
+    return conf
 
 
 def main():
+    conf = parse_args()
 
-    if len(sys.argv) < 2:
-        print("usage: %s NODESET [EXCLUDED_UID]" % (sys.argv[0]))
-        sys.exit(1)
+    output_format = {'nodes_only': conf.nodes_only}
 
-    excluded_uids = ''
-    if len(sys.argv) >= 3:
-        excluded_uids = sys.argv[2]
-
-    nodeset_s = sys.argv[1]
+    excluded_uids = conf.excluded_uids
+    nodeset_s = conf.nodeset
+    helper_path = conf.helper_path
     nodeset = NodeSet(nodeset_s)
     nodes_users = get_nodes_users(nodeset)
-    get_nodes_weird_procs(nodeset, nodes_users, excluded_uids)
+    procs = get_nodes_weird_procs(nodeset, excluded_uids, helper_path)
+    print_procs(procs, nodes_users, output_format)
 
 
 if __name__ == '__main__':

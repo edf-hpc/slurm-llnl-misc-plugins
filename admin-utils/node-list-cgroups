@@ -1,0 +1,76 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# Copyright (C) 2019 EDF SA
+#
+# Authors: CCN - HPC <dsp-cspit-ccn-hpc@edf.fr>
+#
+# This file is part of slurm-llnl-misc-plugins
+#
+# scibian-build-tools is free software: you can redistribute it
+# and/or modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# scibian-build-tools is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with scibian-build-tools.  If not, see
+# <http://www.gnu.org/licenses/>.
+
+import os
+import sys
+import json
+
+def main():
+    """Prints a dump of every job ids with remaining cgroups and the list of
+       step cgroups associated.
+
+       Meant to be called by slurm-check-cgroups-nojob."""
+
+    cgroup_base_path = '/sys/fs/cgroup/cpuset/slurm_%s' % os.uname()[1]
+
+    excluded_uids = []
+    if len(sys.argv) >= 2:
+        excluded_uids = [int(uid_s) for uid_s in sys.argv[1].split(',')]
+
+    user_jobs = {}
+
+    if os.path.isdir(cgroup_base_path):
+        slurm_cgroup_items = os.listdir(cgroup_base_path)
+    else:
+        slurm_cgroup_items = []
+
+    for slurm_cgroup in slurm_cgroup_items:
+        if not slurm_cgroup.startswith('uid_'):
+            continue
+
+        uid = slurm_cgroup.split('_')[1]
+        if uid <= 1000 or uid in excluded_uids:
+            continue
+
+        user_cgroup_path = "%s/%s" % (cgroup_base_path, slurm_cgroup)
+        user_cgroup_items = os.listdir(user_cgroup_path)
+        for user_cgroup in user_cgroup_items:
+            if not user_cgroup.startswith('job_'):
+                continue
+
+            jobid = user_cgroup.split('_')[1]
+            job_cgroup_path = "%s/%s" % (user_cgroup_path, user_cgroup)
+            job_cgroup_items = os.listdir(job_cgroup_path)
+            step_list = []
+            for job_cgroup in job_cgroup_items:
+                if not job_cgroup.startswith('step_'):
+                    continue
+                step_list.append(job_cgroup)
+            if uid not in user_jobs:
+                user_jobs[uid] = []
+            user_jobs[uid].append((jobid, ','.join(step_list)))
+
+    print json.dumps(user_jobs)
+
+if __name__ == '__main__':
+    main()

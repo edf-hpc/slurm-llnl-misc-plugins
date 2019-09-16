@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (1.0.1) unstable; urgency=medium
+
+  * genscripts: rework cgroup cleaning in epilog
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Mon, 16 Sep 2019 11:44:16 +0200
+
 slurm-llnl-misc-plugins (1.0.0) unstable; urgency=medium
 
   * admin-utils: Add slurm-check-cgroups-nojob

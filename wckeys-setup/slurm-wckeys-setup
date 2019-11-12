@@ -42,6 +42,7 @@ CMD=$(basename $0)
 
 print_error () {
         logger -s -t wckeys-setup "ERROR: ${2}"
+        clean_tmpfs
         exit ${1}
 }
 
@@ -50,6 +51,11 @@ print_msg () {
         echo -e "\e[00;34m$1\e[00m" 1>&2
 }
 
+clean_tmpfs () {
+        ### Clean system ###
+        umount ${TMP_MNT_POINT}
+        rm -rf  ${TMP_MNT_POINT}
+}
 
 ### Block 0 ###
 ### Create temporaries files and directories ###
@@ -75,6 +81,7 @@ do
   if [ $? -ne 0 ]
   then
     print_error 1 "Retrieving ${PAREO_ENTRY}"
+    clean_tmpfs
     exit 1
   fi
   if [ -f "${CODES_PROJETS_FILE_CURRENT}" ]
@@ -89,6 +96,7 @@ do
     if [ $? -ne 0 ]
     then
       print_error 1 "Retrieving ${CODES_METIERS_ENTRY}"
+      clean_tmpfs
       exit 1
     fi
     if [ -f "${CODES_METIERS_FILE_CURRENT}" ]
@@ -153,6 +161,7 @@ EOF
   if [ $? -ne 0 ]
   then
     print_error 1  "Adding wckey= ${key}"
+    clean_tmpfs
     exit 1
   else
     print_msg "OK"
@@ -172,6 +181,7 @@ EOF
   if [ $? -ne 0 ] 
   then
     print_error 1  "Error deleting wckey= ${key}"
+    clean_tmpfs
     exit 1
   else
     print_msg "OK"
@@ -179,6 +189,4 @@ EOF
 done
 
 ### Block 5 ###
-### Clean system ###
-umount ${TMP_MNT_POINT}
-rm -rf  ${TMP_MNT_POINT}
+clean_tmpfs

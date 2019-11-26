@@ -49,16 +49,32 @@ job_list=$([ -d $cgroup_uid_dir ] && (cd $cgroup_uid_dir; ls -d job_* | awk '/jo
 logger "EPILOG[INFO][$SLURM_JOB_ID]: killing processes of job $SLURM_JOB_ID" 
 find "$cgroup_uid_dir/job_$SLURM_JOB_ID" -name "tasks" -exec kill {} /dev/null \; 2> /dev/null
 
-# then we delete cgroups
+# Then we delete cgroups
+#
+# /!\ Please note this is a work-around for a bug observed on old Linux kernel
+#     (3.16 branch) that wrongly return EBUSY to slurm when it tried to rmdir
+#     the cgroups. See for reference:
+#
+#       https://github.com/torvalds/linux/commit/91486f61f486662c27ef86dd910f875832e3a5de
+#
+#     Fairly recent Linux kernels >= 4.4 are fixed and this work-around will be
+#     useless once these old kernels are resorbed.
 logger "EPILOG[INFO][$SLURM_JOB_ID]: deleting cgroups of job $SLURM_JOB_ID"
-if [ ! -d "$cgroup_uid_dir/job_$SLURM_JOB_ID" ]; then
-	logger "EPILOG[INFO][$SLURM_JOB_ID]: cgroups files not found for $cgroup_uid_dir/job_$SLURM_JOB_ID"
-else
-	logger "EPILOG[ERROR][$SLURM_JOB_ID]: cgroups files found for $cgroup_uid_dir/job_$SLURM_JOB_ID"
-	number_step_dirs=$(find $cgroup_uid_dir/job_$SLURM_JOB_ID -name "step_*" -type d | wc -l)
-	logger "EPILOG[ERROR][$SLURM_JOB_ID]: number of step_* directories is $number_step_dirs"
-	rmdir $cgroup_uid_dir/job_$SLURM_JOB_ID
-fi
+
+CONTROLLERS="cpuset freezer"
+
+for CONTROLLER in $CONTROLLERS; do
+	CONTROLLER_JOB_DIR="/sys/fs/cgroup/$CONTROLLER/slurm_$HOSTNAME/uid_$SLURM_UID/job_$SLURM_JOB_ID"
+	if [ ! -d "$CONTROLLER_JOB_DIR" ]; then
+		logger "EPILOG[INFO][$SLURM_JOB_ID]: cgroups files not found for $CONTROLLER_JOB_DIR"
+	else
+		logger "EPILOG[ERROR][$SLURM_JOB_ID]: cgroups files found for $CONTROLLER_JOB_DIR"
+		number_step_dirs=$(find $CONTROLLER_JOB_DIR -name "step_*" -type d | wc -l)
+		logger "EPILOG[ERROR][$SLURM_JOB_ID]: number of step_* directories is $number_step_dirs"
+		# find -delete processes in-depth first
+		find $CONTROLLER_JOB_DIR -type d -delete
+	fi
+done
 
 for job_id in $job_list; do
 	if [ "$job_id" != "$SLURM_JOB_ID" ]; then
@@ -69,6 +85,11 @@ done
 
 # No other SLURM jobs, purge all remaining processes of this user
 logger "EPILOG[INFO][$SLURM_JOB_ID]: no other JOB were found for user $SLURM_UID ($SLURM_JOB_ID) on $HOSTNAME"
+
+# Ensure user cgroup is removed if user has no other running job on this node
+for CONTROLLER in $CONTROLLERS; do
+	rmdir /sys/fs/cgroup/$CONTROLLER/slurm_$HOSTNAME/uid_$SLURM_UID
+done
 
 for pid in $user_procs; 
 do 

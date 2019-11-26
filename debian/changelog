@@ -1,3 +1,22 @@
+slurm-llnl-misc-plugins (1.0.3) unstable; urgency=medium
+
+  [ Thomas HAMEL ]
+  * slurmdbd-backup: Use single-transaction by default
+
+ -- Thomas HAMEL <thomas-t.hamel@edf.fr>  Tue, 26 Nov 2019 11:35:39 +0100
+
+slurm-llnl-misc-plugins (1.0.2) unstable; urgency=medium
+
+  * correct a bug on slurm-wckeys-setup when tmpfs is not umount when we have a exit code error
+
+ -- Nicolas Meaux <nicolas-externe.meaux@edf.fr>  Mon, 14 Oct 2019 10:39:27 +0200
+
+slurm-llnl-misc-plugins (1.0.1) unstable; urgency=medium
+
+  * genscripts: rework cgroup cleaning in epilog
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Mon, 16 Sep 2019 11:44:16 +0200
+
 slurm-llnl-misc-plugins (1.0.0) unstable; urgency=medium
 
   * admin-utils: Add slurm-check-cgroups-nojob

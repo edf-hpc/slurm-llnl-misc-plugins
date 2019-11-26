@@ -4,7 +4,7 @@
 #                                                                        #
 #  The script reads variables from /etc/slurm-llnl/slurmdbd-backup.vars  #
 #                                                                        #
-#  Copyright (C) 2014-2017 EDF S.A.                                      #
+#  Copyright (C) 2014-2019 EDF S.A.                                      #
 #  Contact: CCN-HPC <dsp-cspit-ccn-hpc@edf.fr>                           #
 #                                                                        #
 #  This program is free software; you can redistribute in and/or         #
@@ -23,6 +23,7 @@ ACCTDB=slurm_acct_db
 BKDIR=/var/backups/slurmdbd/database
 DBMAINCONF=/etc/mysql/debian.cnf
 KEEP_OLD=true
+SINGLE_TRANSACTION=true
 
 config_file="${1:-/etc/slurm-llnl/slurmdbd-backup.vars}"
 
@@ -44,13 +45,26 @@ print_error () {
 }
 
 # Dump current backup
+mysqldump_parameters=(
+ "--defaults-extra-file=${DBMAINCONF}"
+ "-F"
+ "-l"
+)
+
+## --single-transaction: avoid locking the database during dump
+if [[ "x${SINGLE_TRANSACTION}" != "xfalse" ]]
+then
+  mysqldump_parameters+=( "--single-transaction" )
+fi
+
 if [ -d ${BKDIR} ]
 then
   TODAY=$(date +%Y_%m_%d)
   NOW=$(date +%Hh%M)
   [ -d ${BKDIR}/${TODAY} ] || mkdir ${BKDIR}/${TODAY}
   ln -Tfs ${BKDIR}/${TODAY} ${BKDIR}/last
-  mysqldump --defaults-extra-file=${DBMAINCONF} -F -l --databases ${SLURMDB} ${ACCTDB} | gzip > ${BKDIR}/${TODAY}/slurmdbd_$(hostname)_${TODAY}_${NOW}.sql.gz || print_error 2
+  dump_file="${BKDIR}/${TODAY}/slurmdbd_$(hostname)_${TODAY}_${NOW}.sql.gz"
+  mysqldump "${mysqldump_parameters[@]}" --databases "${ACCTDB}" | gzip > "${dump_file}" || print_error 2
 else
   print_error 1 ${BKDIR}
 fi

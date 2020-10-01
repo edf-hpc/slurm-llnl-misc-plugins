@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (1.0.4) unstable; urgency=medium
+
+  * genscripts: don't remove other jobs private-tmpdir
+
+ -- Rémi Palancher <remi-externe.palancher@edf.fr>  Thu, 01 Oct 2020 10:24:27 +0200
+
 slurm-llnl-misc-plugins (1.0.3) unstable; urgency=medium
 
   [ Thomas HAMEL ]

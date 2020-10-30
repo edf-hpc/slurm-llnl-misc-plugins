@@ -19,6 +19,11 @@ if [ $SLURM_UID -lt 1000 ] ; then
 	exit 0
 fi
 
+# TMPDIR_BASE is the base path used by private-tmpdir SPANK plugin to create
+# job private subdirectories. It needs to match the configured base= for this
+# plugin in plugstack.conf. Default value is '/tmp/slurm'.
+TMPDIR_BASE=/tmp/slurm
+
 # Look at cpuset cgroup controller sysfs to check if user has other running
 # jobs on this node. This technique is used to avoid sending RPC to slurmctld
 # (eg. with `squeue`) which could generate noticeable load on slurmctld when
@@ -32,11 +37,12 @@ fi
 # The first parameter is required to ensure the cgroup is created even without
 # real step (ex: with processes launched using SSH) at job allocation time.
 
-# Find and list all user processes, tmp and  shm files to destroy
-# this should fix problem of new user jobs comming when this script is executing
+# Find and list all user processes, tmp (outside of TMPDIR_BASE) and shm files
+# to destroy. These lists are computed at the beginning of this script to
+# minimize risks of conflicts with jobs starting while this script is runnning.
 user_procs=$(pgrep -u "$SLURM_UID")
 user_shm_files=$(find /dev/shm -name 'psm_shm.*')
-user_tmp_files=$(find /tmp -uid "$SLURM_UID")
+user_tmp_files=$(find /tmp -uid "$SLURM_UID" ! -path "${TMPDIR_BASE}.*")
 
 cgroup_uid_dir="/sys/fs/cgroup/cpuset/slurm_$HOSTNAME/uid_$SLURM_UID"
 job_list=$([ -d $cgroup_uid_dir ] && (cd $cgroup_uid_dir; ls -d job_* | awk '/job_[0-9][0-9]*/{sub(/^job_/,""); print}'))
@@ -76,6 +82,16 @@ for CONTROLLER in $CONTROLLERS; do
 	fi
 done
 
+logger "EPILOG[INFO][$SLURM_JOB_ID]: Deleting tmp files for job $SLURM_JOB_ID"
+# Remove private-tmpdir SPANK plugin tmp directory, following guidelines from
+# plugin developpers:
+# https://github.com/hpc2n/spank-private-tmp/blob/master/README
+PRIVATE_TMPDIR="${TMPDIR_BASE}.${SLURM_JOB_ID}.${SLURM_RESTART_COUNT:=0}"
+if [ -d "${PRIVATE_TMPDIR}" ]; then
+   logger "EPILOG[INFO][$SLURM_JOB_ID]: Remove private tmp directory $PRIVATE_TMPDIR"
+   rm -rf "${PRIVATE_TMPDIR}"
+fi
+
 for job_id in $job_list; do
 	if [ "$job_id" != "$SLURM_JOB_ID" ]; then
 		logger "EPILOG[INFO][$SLURM_JOB_ID]: another JOB $job_id is running for user $SLURM_UID ($SLURM_JOB_ID) on $HOSTNAME"
@@ -104,12 +120,12 @@ do
 	rm -f $shm_file
 done
 
-# clean /tmp
-logger "EPILOG[INFO][$SLURM_JOB_ID]: Deleting tmp files for job $SLURM_JOB_ID"
+# Remove user tmp files found outside of private-tmpdir SPANK plugin tmp directories.
+logger "EPILOG[INFO][$SLURM_JOB_ID]: Deleting additional tmp files for user $SLURM_UID"
 IFS=$'\n'
 for tmp_file in $user_tmp_files
 do
-	logger "EPILOG[INFO][$SLURM_JOB_ID]: tmp delete $tmp_file"
+	logger "EPILOG[INFO][$SLURM_JOB_ID]: Remove user additional tmp file $tmp_file"
 	rm -rf $tmp_file
 done
 IFS=''

@@ -1,7 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 ##############################################################################
-#  Copyright (C) 2014-2017 EDF SA                                            #
+#  Copyright (C) 2014-2020 EDF SA                                            #
 #                                                                            #
 #  Author: Rémi Palancher <remi-externe.palancher@edf.fr>                    #
 #                                                                            #
@@ -39,8 +39,7 @@ import sys
 import os
 import argparse
 import MySQLdb
-import ConfigParser
-from sets import Set
+import configparser
 
 # hardcoded conf
 DATABASES = ['slurm_acct_db']
@@ -65,7 +64,7 @@ class Conf(object):
             print("E: failed to parse config file {filename}" \
                       .format(filename=self.filename))
             sys.exit(1)
-        self.parser = ConfigParser.ConfigParser()
+        self.parser = configparser.ConfigParser()
         self.parser.read(self.filename)
 
         # db
@@ -240,7 +239,7 @@ def expected_users_grants(conf, databases):
     users = []
     grants = []
 
-    all_rw_hosts = Set(conf.db_hosts
+    all_rw_hosts = set(conf.db_hosts
                        + conf.controllers
                        + conf.admins
                        + ['localhost'])
@@ -250,7 +249,7 @@ def expected_users_grants(conf, databases):
         for database in databases:
             grants.append(DBMSGrant('all', database, '*', user))
 
-    all_ro_hosts = Set(conf.importers)
+    all_ro_hosts = set(conf.importers)
     for host in all_ro_hosts:
         user = DBMSUser('slurmro', host, conf.passwords['slurmro'])
         users.append(user)
@@ -353,7 +352,7 @@ def main():
             all_hosts_failed = False
             break
 
-        except MySQLdb.Error, e:
+        except MySQLdb.Error as e:
             print("E: mysql error %d: %s" % (e.args[0],e.args[1]))
             pass
 

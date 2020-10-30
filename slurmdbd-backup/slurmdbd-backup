@@ -4,7 +4,7 @@
 #                                                                        #
 #  The script reads variables from /etc/slurm-llnl/slurmdbd-backup.vars  #
 #                                                                        #
-#  Copyright (C) 2014-2019 EDF S.A.                                      #
+#  Copyright (C) 2014-2020 EDF S.A.                                      #
 #  Contact: CCN-HPC <dsp-cspit-ccn-hpc@edf.fr>                           #
 #                                                                        #
 #  This program is free software; you can redistribute in and/or         #
@@ -19,13 +19,20 @@
 export LC_ALL=C
 export LANG=C
 
+if [[ -f '/etc/redhat-release' ]]
+then
+  DEFAULT_CONFIG_FILE="/etc/slurm/slurmdbd-backup.vars"
+else
+  DEFAULT_CONFIG_FILE="/etc/slurm-llnl/slurmdbd-backup.vars"
+fi
+
 ACCTDB=slurm_acct_db
 BKDIR=/var/backups/slurmdbd/database
 DBMAINCONF=/etc/mysql/debian.cnf
 KEEP_OLD=true
 SINGLE_TRANSACTION=true
 
-config_file="${1:-/etc/slurm-llnl/slurmdbd-backup.vars}"
+config_file="${1:-$DEFAULT_CONFIG_FILE}"
 
 # Override the default variables values
 source "${config_file}"

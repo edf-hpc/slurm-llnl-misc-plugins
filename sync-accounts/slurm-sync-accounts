@@ -171,7 +171,7 @@ class Conf(object):
             if user_opts != '':
                 self.user_add_opts = user_opts.split(' ')
             logger.debug("user_add_opts: %s", str(self.user_add_opts))
-        except ConfigParser.NoOptionError:
+        except configparser.NoOptionError:
             # This option is not required in configuration file, then
             # self.user_add_opts stays None if not found.
             pass
@@ -181,7 +181,7 @@ class Conf(object):
             if acct_opts != '':
                 self.acct_add_opts = acct_opts.split(' ')
             logger.debug("acct_add_opts: %s", str(self.acct_add_opts))
-        except ConfigParser.NoOptionError:
+        except configparser.NoOptionError:
             # This option is not required in configuration file, then
             # self.acct_add_opts stays None if not found.
             pass
@@ -285,7 +285,7 @@ def get_slurm_users():
     users = []
     cmd = [ 'sacctmgr', 'show', 'user', '--parsable', '--noheader' ]
     logger.debug("run: {cmd}".format(cmd=' '.join(cmd)))
-    output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
+    output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0].decode('utf-8')
     reader = csv.reader(output.strip().split('\n'), delimiter='|')
     for row in reader:
         user = row[0]

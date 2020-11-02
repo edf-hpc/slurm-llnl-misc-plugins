@@ -1,6 +1,6 @@
 # Configuration Logic
 %define name slurm-llnl-misc-plugins
-%define version 1.0.4
+%define version 1.1.0
 %define debug_package %{nil}
 
 # Main preamble
@@ -97,7 +97,7 @@ for the specified stage.
 %package -n slurm-llnl-job-submit-plugin
 Summary: Lua plugin for routing jobs in approriate defined QOSes
 Group: Application/System
-# Depends : slurm basic plugins lua
+Requires: lua, slurm
 %description -n slurm-llnl-job-submit-plugin
 This package provides a lua script for routing jobs in appropriate QOSes
 depending on the compute resources asked by the job.
@@ -110,7 +110,7 @@ depending on the compute resources asked by the job.
 %package -n slurm-llnl-setup-mysql
 Summary: MySQL setup script for SlurmDBD
 Group: Application/System
-#Depends : python-mysqldb  python3-mysqlclient
+Requires: python3-mysqlclient
 %description -n slurm-llnl-setup-mysql
 This package provides a Python script which setup MySQL server, creates the
 databases and gives all needed grants to the slurm user of SlurmDBD. It is
@@ -122,7 +122,7 @@ eventually usable within Puppet manifests for instance.
 %package -n slurm-llnl-setup-wckeys
 Summary: slurm-llnl-setup-wckeys
 Group: Application/System
-# Depends : curl, dos2unix
+Requires: curl, dos2unix
 %description -n slurm-llnl-setup-wckeys
 This package provides a Shell script which add wckeys into Slurmdbd 
 database. It assembles codes (one by one) from 2 files to create a
@@ -133,7 +133,7 @@ wckey and insert it into the slurm database.
 %package -n slurm-llnl-sync-accounts
 Summary: Script to keep accounts in sync in SlurmDBD
 Group: Application/System
-# Depends : python, cron, slurm-client
+Requires: slurm, crontabs
 %description -n slurm-llnl-sync-accounts
 This package provides a Python script and a cronjob to sync cluster group
 members with users and accounts in SlurmDBD.
@@ -143,7 +143,7 @@ members with users and accounts in SlurmDBD.
 %package -n slurmdbd-backup
 Summary: Tool to backup the SlurmDBD database
 Group: Application/System 
-#Depends : mariadb-client
+Requires: mariadb
 %description -n slurmdbd-backup
 The database is dumped in a local directory with the mysqldump tool.
 

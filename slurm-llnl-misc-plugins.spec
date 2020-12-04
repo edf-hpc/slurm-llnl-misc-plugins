@@ -1,6 +1,6 @@
 # Configuration Logic
 %define name slurm-llnl-misc-plugins
-%define version 1.1.0
+%define version 1.1.1
 %define debug_package %{nil}
 
 # Main preamble
@@ -206,6 +206,9 @@ The database is dumped in a local directory with the mysqldump tool.
 /etc/slurm/slurmdbd-backup.vars
 
 %changelog
+* Fri Dec 04 2020 Thomas Hamel <thomas-t.hamel@edf.fr> 1.1.1-1el8.edf
+- bump to 1.1.1
+
 * Fri Oct 30 2020 Thomas Hamel <thomas-t.hamel@edf.fr> 1.0.4-1el8.edf
 - Add all batch nodes packages and bump to 1.0.4
 

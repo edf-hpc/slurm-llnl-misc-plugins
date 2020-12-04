@@ -29,37 +29,6 @@
 
 --########################################################################--
 --
---  Define main parameters (can be overriden in conf_file)
---
---########################################################################--
-
-QOS_CONF       = "/etc/slurm-llnl/qos.conf"
-QOS_SEP        = "|"         -- separator for sacctmgr command ouput
-QOS_NAME_SEP   = "_"         -- separator for QOS name
-ACCOUNTS_SEP   = ","         -- separator for accounts
-NULL           = 4294967294  -- numeric nil
-INFINITE       = 4294967294  -- max unsigned 32 bits integer value for slurm
-CORES_PER_NODE = 4
-ENFORCE_ACCOUNT = false      -- check qos/account compatibility, default to no
-
--- cf. slurm/slurm_errno.h
-ESLURM_INVALID_WCKEY = 2057
-ESLURM_INVALID_QOS = 2066
-ESLURM_INVALID_ACCOUNT = 2045
-WCKEY_CONF_FILE = "/etc/slurm-llnl/wckeysctl/wckeys"
-WCKEY_USER_EXCEPTION_FILE = "/etc/slurm-llnl/wckeysctl/wckeys_user_exception"
-
-conf_file = "/etc/slurm-llnl/job_submit.conf"
-conf_fh = io.open (conf_file, "r")
-if conf_fh == nil then
-   slurm.log_info("slurm_job_modify: No readable %s found!", conf_file)
-else
-   io.close(conf_fh)
-   dofile("/etc/slurm-llnl/job_submit.conf")
-end
-
---########################################################################--
---
 --  Define functions
 --
 --########################################################################--
@@ -339,6 +308,43 @@ function track_wckey (job_desc, part_list, submit_uid, username)
      end
    end
 
+end
+
+--########################################################################--
+--
+--  Define main parameters (can be overriden in conf_file)
+--
+--########################################################################--
+
+if file_exists('/etc/redhat-release') then
+    CONF_DIR = '/etc/slurm'
+else
+    CONF_DIR = '/etc/slurm-llnl'
+end
+
+QOS_CONF       = CONF_DIR .. "/qos.conf"
+QOS_SEP        = "|"         -- separator for sacctmgr command ouput
+QOS_NAME_SEP   = "_"         -- separator for QOS name
+ACCOUNTS_SEP   = ","         -- separator for accounts
+NULL           = 4294967294  -- numeric nil
+INFINITE       = 4294967294  -- max unsigned 32 bits integer value for slurm
+CORES_PER_NODE = 4
+ENFORCE_ACCOUNT = false      -- check qos/account compatibility, default to no
+
+-- cf. slurm/slurm_errno.h
+ESLURM_INVALID_WCKEY = 2057
+ESLURM_INVALID_QOS = 2066
+ESLURM_INVALID_ACCOUNT = 2045
+WCKEY_CONF_FILE = CONF_DIR .. "/wckeysctl/wckeys"
+WCKEY_USER_EXCEPTION_FILE = CONF_DIR .. "/wckeysctl/wckeys_user_exception"
+
+conf_file = CONF_DIR .. "/job_submit.conf"
+conf_fh = io.open (conf_file, "r")
+if conf_fh == nil then
+   slurm.log_info("slurm_job_modify: No readable %s found!", conf_file)
+else
+   io.close(conf_fh)
+   dofile(conf_file)
 end
 
 

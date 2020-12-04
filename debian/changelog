@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (1.1.1) unstable; urgency=medium
+
+  * Python3 port and EL8 compatibilty
+
+ -- Thomas HAMEL <thomas-t.hamel@edf.fr>  Fri, 04 Dec 2020 10:07:00 +0100
+
 slurm-llnl-misc-plugins (1.1.0) unstable; urgency=medium
 
   * Python3 port and EL8 compatibility

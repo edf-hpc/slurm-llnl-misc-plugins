@@ -42,6 +42,7 @@
 import subprocess
 import sys
 import csv
+import os
 
 # list of QOS to ignore for file
 excluded_qos = [ 'dsp-ap-hpcstats' ]
@@ -51,7 +52,7 @@ excluded_accounts = [ 'root' ]
 def read_csv_cmd(cmd, fieldnames):
     output = None
     try:
-        output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
+        output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0].decode('utf-8')
     except subprocess.CalledProcessError as e:
         print("error while executing cmd: %s: %s" % (','.join(cmd), str(e)))
         sys.exit(1)
@@ -84,7 +85,10 @@ def get_qos_accounts():
 
     return result
 
-QOS_CONF = "/etc/slurm-llnl/qos.conf"
+if os.path.isfile('/etc/redhat-release'):
+  QOS_CONF = "/etc/slurm/qos.conf"
+else:
+  QOS_CONF = "/etc/slurm-llnl/qos.conf"
 
 qos_accounts = get_qos_accounts()
 

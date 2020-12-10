@@ -1,6 +1,6 @@
 # Configuration Logic
 %define name slurm-llnl-misc-plugins
-%define version 1.1.1
+%define version 1.2.0
 %define debug_package %{nil}
 
 # Main preamble
@@ -35,6 +35,9 @@ do
     ln -s /usr/lib/slurm/generic-scripts/generic-script.sh %{buildroot}/usr/lib/slurm/generic-scripts/${step}.sh
 done
 install -m 755 Epilog.d/00_clean %{buildroot}/usr/lib/slurm/generic-scripts/Epilog.d
+
+# slurm-llnl-generic-scripts-plugin-lgssc
+install -m 755 TaskProlog.d/kerberos_lustre.sh %{buildroot}/usr/lib/slurm/generic-scripts/TaskProlog.d
 
 # slurm-llnl-job-submit-plugin
 mkdir -p %{buildroot}/etc/slurm/wckeysctl
@@ -82,7 +85,7 @@ Miscelaneous plugins for Slurm open source scheduler
 # slurm-llnl-generic-scripts-plugin package
 %package -n slurm-llnl-generic-scripts-plugin
 Summary: Generic Prolog and Epilog scripts for Slurm
-Group: Application/System 
+Group: Application/System
 %description -n slurm-llnl-generic-scripts-plugin
 The job scheduler Slurm can execute so called Prolog and Epilog scripts
 at different stages of each job. For each stage, one script has to appear
@@ -92,6 +95,13 @@ behave as a (Pro|Epi)log script using an associated (Pro|Epi)log.d directory
 next to it. The latter should contain executable scripts that will be run
 for the specified stage.
 
+%package -n slurm-llnl-generic-scripts-plugin-lgssc
+Summary: Slurm Task Prolog to initialize lustre kerberos
+Group: Application/System
+Requires: slurm-llnl-generic-scripts-plugin
+%description -n slurm-llnl-generic-scripts-plugin-lgssc
+This package provides a task prolog script to setup lustre kerberos
+keys.
 
 # slurm-llnl-job-submit-plugin
 %package -n slurm-llnl-job-submit-plugin
@@ -155,7 +165,7 @@ The database is dumped in a local directory with the mysqldump tool.
 /usr/lib/slurm/generic-scripts/generic-script.sh
 /usr/lib/slurm/generic-scripts/Prolog.d
 /usr/lib/slurm/generic-scripts/SrunProlog.d
-/usr/lib/slurm/generic-scripts/TaskProlog.d
+%dir /usr/lib/slurm/generic-scripts/TaskProlog.d
 /usr/lib/slurm/generic-scripts/PrologSlurmctld.d
 /usr/lib/slurm/generic-scripts/Epilog.d
 /usr/lib/slurm/generic-scripts/SrunEpilog.d
@@ -170,10 +180,14 @@ The database is dumped in a local directory with the mysqldump tool.
 /usr/lib/slurm/generic-scripts/TaskEpilog.sh
 /usr/lib/slurm/generic-scripts/TaskProlog.sh
 
+%files -n slurm-llnl-generic-scripts-plugin-lgssc
+%defattr(-,root,root,-)
+/usr/lib/slurm/generic-scripts/TaskProlog.d/kerberos_lustre.sh
+
 # slurm-llnl-job-submit-plugin
 %files -n slurm-llnl-job-submit-plugin
 %defattr(-,root,root,-)
-/etc/slurm/wckeysctl
+%config /etc/slurm/wckeysctl
 /usr/lib/slurm/job_submit.lua
 /usr/sbin/slurm-gen-qos-conf
 
@@ -183,7 +197,7 @@ The database is dumped in a local directory with the mysqldump tool.
 %files -n slurm-llnl-setup-mysql
 %defattr(-,root,root,-)
 /usr/sbin/slurm-mysql-setup
-/etc/slurm/slurm-mysql.conf
+%config /etc/slurm/slurm-mysql.conf
 
 #BATCH slurm-llnl-setup-wckeys
 %files -n slurm-llnl-setup-wckeys
@@ -195,17 +209,22 @@ The database is dumped in a local directory with the mysqldump tool.
 #BATCH slurm-llnl-sync-accounts
 %files -n slurm-llnl-sync-accounts
 /usr/sbin/slurm-sync-accounts
-/etc/slurm/sync-accounts.conf
-/etc/cron.d/slurm-llnl-sync-accounts
+%config /etc/slurm/sync-accounts.conf
+%config /etc/cron.d/slurm-llnl-sync-accounts
 
 #BATCH slurmdbd-backup
 %files -n slurmdbd-backup
 /var/backups/slurmdbd
 /var/backups/slurmdbd/database
 /usr/sbin/slurmdbd-backup
-/etc/slurm/slurmdbd-backup.vars
+%config /etc/slurm/slurmdbd-backup.vars
 
 %changelog
+* Thu Dec 10 2020 Thomas Hamel <thomas-t.hamel@edf.fr> 1.2.0-1el8.edf
+- bump to 1.2.0
+- add kerberos_lustre task prolog
+- mark files in /etc as config
+
 * Fri Dec 04 2020 Thomas Hamel <thomas-t.hamel@edf.fr> 1.1.1-1el8.edf
 - bump to 1.1.1
 

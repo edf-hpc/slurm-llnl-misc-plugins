@@ -1,3 +1,9 @@
+slurm-llnl-misc-plugins (1.2.1) unstable; urgency=medium
+
+  * wckeys: EL8 compatibility
+
+ -- Thomas HAMEL <thomas-t.hamel@edf.fr>  Wed, 16 Dec 2020 19:38:00 +0100
+
 slurm-llnl-misc-plugins (1.2.0) unstable; urgency=medium
 
   * taskprolog for lustre kerberos

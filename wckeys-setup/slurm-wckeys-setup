@@ -1,7 +1,7 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
 ##############################################################################
-#  Copyright (C) 2015-2017 EDF SA                                            #
+#  Copyright (C) 2015-2020 EDF SA                                            #
 #                                                                            #
 #  Author: CCN HPC <dsp
 #                                                                            #
@@ -37,8 +37,17 @@
 
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 CMD=$(basename $0)
-[ -f /etc/default/wckeysctl ] && source /etc/default/wckeysctl
-[ -f /etc/slurm-llnl/slurmdbd.conf ] && source /etc/slurm-llnl/slurmdbd.conf
+
+if [[ -f /etc/redhat-release ]]
+then
+  default_dir="/etc/sysconfig"
+  slurm_conf_dir="/etc/slurm"
+else
+  default_dir="/etc/default"
+  slurm_conf_dir="/etc/slurm-llnl"
+fi
+[ -f "${default_dir}/wckeysctl" ] && source "${default_dir}/wckeysctl"
+[ -f "${slurm_conf_dir}/slurmdbd.conf" ] && source "${slurm_conf_dir}/slurmdbd.conf"
 
 print_error () {
         logger -s -t wckeys-setup "ERROR: ${2}"
@@ -62,12 +71,12 @@ clean_tmpfs () {
 TMP_MNT_POINT=$(mktemp -d)
 mount -t tmpfs -o size=20m tmpfs ${TMP_MNT_POINT}
 
-WCKEYS_TMP_FILE=$(tempfile -d ${TMP_MNT_POINT})
-ACCOUNTS_TMP_FILE=$(tempfile -d ${TMP_MNT_POINT})
-TMP_FILE_MYSQL=$(tempfile -d ${TMP_MNT_POINT})
-WCKEYS_INDB_TMP_FILE=$(tempfile -d ${TMP_MNT_POINT})
-WCKEYS_ADD_TMP_FILE=$(tempfile -d ${TMP_MNT_POINT})
-WCKEYS_DEL_TMP_FILE=$(tempfile -d ${TMP_MNT_POINT})
+WCKEYS_TMP_FILE=$(mktemp -p ${TMP_MNT_POINT})
+ACCOUNTS_TMP_FILE=$(mktemp -p ${TMP_MNT_POINT})
+TMP_FILE_MYSQL=$(mktemp -p ${TMP_MNT_POINT})
+WCKEYS_INDB_TMP_FILE=$(mktemp -p ${TMP_MNT_POINT})
+WCKEYS_ADD_TMP_FILE=$(mktemp -p ${TMP_MNT_POINT})
+WCKEYS_DEL_TMP_FILE=$(mktemp -p ${TMP_MNT_POINT})
 
 ### Block 1 ###
 ### Generate wckeys file ####
@@ -76,7 +85,7 @@ iteration=1
 for PAREO_ENTRY in ${PAREO_FILE}
 do
   print_msg "Retrieve PAREO file ${iteration}"
-  CODES_PROJETS_FILE_CURRENT=$(tempfile -d ${TMP_MNT_POINT})
+  CODES_PROJETS_FILE_CURRENT=$(mktemp -p ${TMP_MNT_POINT})
   curl -s ${PAREO_ENTRY} -o ${CODES_PROJETS_FILE_CURRENT}
   if [ $? -ne 0 ]
   then
@@ -91,7 +100,7 @@ do
     CODES_PROJETS_LIST=$(awk -F';' '{print tolower($1)}' ${CODES_PROJETS_FILE_CURRENT} | sed 's/^[ \t]*//;s/[ \t]*$//' | sort -u)
     CODES_METIERS_ENTRY=$(echo ${CODES_FILE} | cut -f${nb} -d" ")
     print_msg "Retrieve METIERS file ${iteration}"
-    CODES_METIERS_FILE_CURRENT=$(tempfile -d ${TMP_MNT_POINT})
+    CODES_METIERS_FILE_CURRENT=$(mktemp -p ${TMP_MNT_POINT})
     curl -s ${CODES_METIERS_ENTRY} -o ${CODES_METIERS_FILE_CURRENT}
     if [ $? -ne 0 ]
     then

@@ -1,6 +1,6 @@
 # Configuration Logic
 %define name slurm-llnl-misc-plugins
-%define version 1.2.1
+%define version 1.2.2
 %define debug_package %{nil}
 
 # Main preamble
@@ -220,6 +220,10 @@ The database is dumped in a local directory with the mysqldump tool.
 %config /etc/slurm/slurmdbd-backup.vars
 
 %changelog
+* Thu Dec 24 2020 Thomas Hamel <thomas-t.hamel@edf.fr> 1.2.2-1el8.edf
+- bump to 1.2.2
+- Fix epilog to detect job are still running
+
 * Wed Dec 16 2020 Thomas Hamel <thomas-t.hamel@edf.fr> 1.2.1-1el8.edf
 - bump to 1.2.1
 - wckeys EL8 compatibility

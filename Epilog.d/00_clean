@@ -44,7 +44,15 @@ user_procs=$(pgrep -u "$SLURM_UID")
 user_shm_files=$(find /dev/shm -name 'psm_shm.*')
 user_tmp_files=$(find /tmp -uid "$SLURM_UID" ! -path "${TMPDIR_BASE}.*")
 
-cgroup_uid_dir="/sys/fs/cgroup/cpuset/slurm_$HOSTNAME/uid_$SLURM_UID"
+# Some SLURM versions have the hostname, others don't, trying to detect
+# the actual one used is probably the more robust way
+if [[ -d "/sys/fs/cgroup/cpuset/slurm_$HOSTNAME" ]]
+then
+  cgroup_uid_dirname="slurm_$HOSTNAME/uid_$SLURM_UID"
+else
+  cgroup_uid_dirname="slurm/uid_$SLURM_UID"
+fi
+cgroup_uid_dir="/sys/fs/cgroup/cpuset/${cgroup_uid_dirname}"
 job_list=$([ -d $cgroup_uid_dir ] && (cd $cgroup_uid_dir; ls -d job_* | awk '/job_[0-9][0-9]*/{sub(/^job_/,""); print}'))
 
 # Clean Job actual job cgroups and processes
@@ -70,7 +78,7 @@ logger "EPILOG[INFO][$SLURM_JOB_ID]: deleting cgroups of job $SLURM_JOB_ID"
 CONTROLLERS="cpuset freezer"
 
 for CONTROLLER in $CONTROLLERS; do
-	CONTROLLER_JOB_DIR="/sys/fs/cgroup/$CONTROLLER/slurm_$HOSTNAME/uid_$SLURM_UID/job_$SLURM_JOB_ID"
+	CONTROLLER_JOB_DIR="/sys/fs/cgroup/$CONTROLLER/${cgroup_uid_dirname}/job_$SLURM_JOB_ID"
 	if [ ! -d "$CONTROLLER_JOB_DIR" ]; then
 		logger "EPILOG[INFO][$SLURM_JOB_ID]: cgroups files not found for $CONTROLLER_JOB_DIR"
 	else
@@ -104,7 +112,7 @@ logger "EPILOG[INFO][$SLURM_JOB_ID]: no other JOB were found for user $SLURM_UID
 
 # Ensure user cgroup is removed if user has no other running job on this node
 for CONTROLLER in $CONTROLLERS; do
-	rmdir /sys/fs/cgroup/$CONTROLLER/slurm_$HOSTNAME/uid_$SLURM_UID
+	rmdir /sys/fs/cgroup/$CONTROLLER/${cgroup_uid_dirname}
 done
 
 for pid in $user_procs; 

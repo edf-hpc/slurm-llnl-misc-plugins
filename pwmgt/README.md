@@ -8,10 +8,10 @@ This set of slurm power management utilities is composed of:
   by Slurm workload manager controller daemon. This script run ipmitool utility
   to start nodes and SSH command to stop nodes, with help of ClusterShell
   library for parallelization. This script has a configuration file located in
-  `/etc/slurm-llnl/pwmgt/main.conf`.
+  `/etc/slurm/pwmgt/main.conf`.
 * `slurm-pwmgt-stop-wrapper`, a wrapper of suspend/stop OS commands designed to
   be run as SSH forced command. This script has a configuration file located in
-  `/etc/slurm-llnl/pwmgt/stop-wrapper.conf`. Default values should be fine for
+  `/etc/slurm/pwmgt/stop-wrapper.conf`. Default values should be fine for
   most systems though.
 
 The `slurm-pwmgt-nodes` is expected to connect as root on compute with a
@@ -29,26 +29,26 @@ On slurm controller server:
 # apt-get install slurm-pwmgt-nodes
 ```
 
-* Edit `/etc/slurm-llnl/pwmgt/main.conf` to fit your requirements
+* Edit `/etc/slurm/pwmgt/main.conf` to fit your requirements
 
 * Protect IPMI password with restricted files permissions:
 
 ```
-# chmod 0640 /etc/slurm-llnl/pwmgt/main.conf
-# chown slurm: /etc/slurm-llnl/pwmgt/main.conf
+# chmod 0640 /etc/slurm/pwmgt/main.conf
+# chown slurm: /etc/slurm/pwmgt/main.conf
 ```
 
 * Generate a new pair of SSH keys without passphrase:
 
 ```
 # ssh-keygen -b 2048 -t rsa -N '' -C slurm@nodes \
-  -f /etc/slurm-llnl/pwmgt/id_rsa_slurm
+  -f /etc/slurm/pwmgt/id_rsa_slurm
 ```
 
 * Set ownership of the keys to slurm user:
 
 ```
-# chown slurm: /etc/slurm-llnl/pwmgt/id_rsa*
+# chown slurm: /etc/slurm/pwmgt/id_rsa*
 ```
 
 On compute nodes:

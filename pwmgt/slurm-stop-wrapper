@@ -51,7 +51,7 @@ class AppConf():
 
     def __init__(self):
 
-        self.conf_file = '/etc/slurm-llnl/pwmgt/stop-wrapper.conf'
+        self.conf_file = '/etc/slurm/pwmgt/stop-wrapper.conf'
         self.cmd_suspend = None
         self.cmd_poweroff = None
 

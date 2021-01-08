@@ -35,7 +35,7 @@
 #                                                                            #
 ##############################################################################
 
-""" This script generates /etc/slurm-llnl/qos.conf configuration file used
+""" This script generates /etc/slurm/qos.conf configuration file used
     by Lua job submit plugin. The content of the file is based on the QOS
     in place in SlurmDBD database and the output of sacctmgr command. """
 
@@ -85,10 +85,7 @@ def get_qos_accounts():
 
     return result
 
-if os.path.isfile('/etc/redhat-release'):
-  QOS_CONF = "/etc/slurm/qos.conf"
-else:
-  QOS_CONF = "/etc/slurm-llnl/qos.conf"
+QOS_CONF = "/etc/slurm/qos.conf"
 
 qos_accounts = get_qos_accounts()
 

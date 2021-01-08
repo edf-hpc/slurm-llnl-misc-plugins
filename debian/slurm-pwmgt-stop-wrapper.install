@@ -1,2 +1,0 @@
-pwmgt/slurm-stop-wrapper usr/lib/slurm-pwmgt/exec
-pwmgt/stop-wrapper.conf etc/slurm-llnl/pwmgt

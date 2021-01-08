@@ -1,2 +1,0 @@
-sync-accounts/slurm-sync-accounts usr/sbin
-sync-accounts/sync-accounts.conf etc/slurm-llnl

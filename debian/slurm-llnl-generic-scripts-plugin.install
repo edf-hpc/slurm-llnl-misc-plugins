@@ -1,2 +1,0 @@
-generic-script.sh       usr/lib/slurm/generic-scripts
-Epilog.d/00_clean	usr/lib/slurm/generic-scripts/Epilog.d

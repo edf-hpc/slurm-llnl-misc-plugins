@@ -1,8 +1,0 @@
-usr/lib/slurm/generic-scripts/generic-script.sh         usr/lib/slurm/generic-scripts/Prolog.sh
-usr/lib/slurm/generic-scripts/generic-script.sh         usr/lib/slurm/generic-scripts/SrunProlog.sh
-usr/lib/slurm/generic-scripts/generic-script.sh         usr/lib/slurm/generic-scripts/TaskProlog.sh
-usr/lib/slurm/generic-scripts/generic-script.sh         usr/lib/slurm/generic-scripts/PrologSlurmctld.sh
-usr/lib/slurm/generic-scripts/generic-script.sh         usr/lib/slurm/generic-scripts/Epilog.sh
-usr/lib/slurm/generic-scripts/generic-script.sh         usr/lib/slurm/generic-scripts/SrunEpilog.sh
-usr/lib/slurm/generic-scripts/generic-script.sh         usr/lib/slurm/generic-scripts/TaskEpilog.sh
-usr/lib/slurm/generic-scripts/generic-script.sh         usr/lib/slurm/generic-scripts/EpilogSlurmctld.sh

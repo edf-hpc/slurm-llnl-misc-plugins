@@ -1,7 +1,7 @@
 SACCTMGR=/usr/bin/sacctmgr
 CLUSTERNAME=""
-PAREO_FILE=/etc/slurm-llnl/wckeysctl/codes_projets.csv
-CODES_FILE=/etc/slurm-llnl/wckeysctl/codes_metiers.csv
-WCKEYS_FILE=/etc/slurm-llnl/wckeysctl/wckeys
+PAREO_FILE=/etc/slurm/wckeysctl/codes_projets.csv
+CODES_FILE=/etc/slurm/wckeysctl/codes_metiers.csv
+WCKEYS_FILE=/etc/slurm/wckeysctl/wckeys
 DB_NAME='slurm_acct_db'
-SLURMDB_FILE=/etc/slurm-llnl/slurmdbd.conf
+SLURMDB_FILE=/etc/slurm/slurmdbd.conf

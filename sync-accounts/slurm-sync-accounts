@@ -52,12 +52,7 @@ conf = None
 logger = None
 args = None
 
-if os.path.isfile('/etc/redhat-release'):
-    DEFAULT_SLURM_CONF_DIR = '/etc/slurm'
-else:
-    DEFAULT_SLURM_CONF_DIR = '/etc/slurm-llnl'
-
-DEFAULT_CONF_FILE = DEFAULT_SLURM_CONF_DIR + '/sync-accounts.conf'
+DEFAULT_CONF_FILE = '/etc/slurm/sync-accounts.conf'
 
 # This list specifies list of users that should normally be present in SlurmDBD
 # but not necessarily in users groups, and therefore should not be removed from

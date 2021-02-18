@@ -316,12 +316,7 @@ end
 --
 --########################################################################--
 
-if file_exists('/etc/redhat-release') then
-    CONF_DIR = '/etc/slurm'
-else
-    CONF_DIR = '/etc/slurm-llnl'
-end
-
+CONF_DIR       = '/etc/slurm'
 QOS_CONF       = CONF_DIR .. "/qos.conf"
 QOS_SEP        = "|"         -- separator for sacctmgr command ouput
 QOS_NAME_SEP   = "_"         -- separator for QOS name

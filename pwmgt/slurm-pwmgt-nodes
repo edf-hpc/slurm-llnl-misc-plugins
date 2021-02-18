@@ -55,7 +55,7 @@ class AppConf():
     def __init__(self):
 
         self.debug = False
-        self.conf_file = '/etc/slurm-llnl/pwmgt/main.conf'
+        self.conf_file = '/etc/slurm/pwmgt/main.conf'
         self.action = None
         self.ssh_identity = None
         self.ipmi_exec = None
@@ -113,7 +113,7 @@ def parse_conf():
       "debug=no\n"
       "action=poweroff\n"
       "[ssh]\n"
-      "identity=/etc/slurm-llnl/pwmgt/id_rsa_slurm\n"
+      "identity=/etc/slurm/pwmgt/id_rsa_slurm\n"
       "[ipmi]\n"
       "exec=/usr/bin/ipmitool\n"
       "bootcmd=chassis power on\n"

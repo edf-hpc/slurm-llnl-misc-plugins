@@ -2,7 +2,7 @@
 ##########################################################################
 #  Script used to dump the SlurmDBD MySQL database locally               #
 #                                                                        #
-#  The script reads variables from /etc/slurm-llnl/slurmdbd-backup.vars  #
+#  The script reads variables from /etc/slurm/slurmdbd-backup.vars       #
 #                                                                        #
 #  Copyright (C) 2014-2020 EDF S.A.                                      #
 #  Contact: CCN-HPC <dsp-cspit-ccn-hpc@edf.fr>                           #
@@ -19,13 +19,7 @@
 export LC_ALL=C
 export LANG=C
 
-if [[ -f '/etc/redhat-release' ]]
-then
-  DEFAULT_CONFIG_FILE="/etc/slurm/slurmdbd-backup.vars"
-else
-  DEFAULT_CONFIG_FILE="/etc/slurm-llnl/slurmdbd-backup.vars"
-fi
-
+DEFAULT_CONFIG_FILE="/etc/slurm/slurmdbd-backup.vars"
 ACCTDB=slurm_acct_db
 BKDIR=/var/backups/slurmdbd/database
 DBMAINCONF=/etc/mysql/debian.cnf

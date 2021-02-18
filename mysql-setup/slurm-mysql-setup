@@ -41,12 +41,7 @@ import argparse
 import MySQLdb
 import configparser
 
-if os.path.isfile('/etc/redhat-release'):
-    DEFAULT_SLURM_CONF_DIR = '/etc/slurm'
-else:
-    DEFAULT_SLURM_CONF_DIR = '/etc/slurm-llnl'
-
-DEFAULT_CONF_FILE = DEFAULT_SLURM_CONF_DIR + '/slurm-mysql.conf'
+DEFAULT_CONF_FILE = '/etc/slurm/slurm-mysql.conf'
 
 # hardcoded conf
 DATABASES = ['slurm_acct_db']

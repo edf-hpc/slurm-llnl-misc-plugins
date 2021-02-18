@@ -1,6 +1,6 @@
 # Configuration Logic
 %define name slurm-llnl-misc-plugins
-%define version 1.2.2
+%define version 1.2.4
 %define debug_package %{nil}
 
 # Main preamble
@@ -220,6 +220,10 @@ The database is dumped in a local directory with the mysqldump tool.
 %config /etc/slurm/slurmdbd-backup.vars
 
 %changelog
+* Thu Feb 18 2021 Thomas Hamel <thomas-t.hamel@edf.fr> 1.2.4-1el8.edf
+- bump to 1.2.4
+- Add renewer for lustre kerberos
+
 * Thu Dec 24 2020 Thomas Hamel <thomas-t.hamel@edf.fr> 1.2.2-1el8.edf
 - bump to 1.2.2
 - Fix epilog to detect job are still running

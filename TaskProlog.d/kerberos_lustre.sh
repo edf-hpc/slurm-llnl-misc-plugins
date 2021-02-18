@@ -36,6 +36,10 @@ else
   fi
 fi
 
+# Launch a background renewer for this canonical cache using auks
+
+systemd-run --user auks -R loop -C "${canonical_ccache}"
+
 # And now the confusing part
 
 # Trying to access lustre, this triggers a new key

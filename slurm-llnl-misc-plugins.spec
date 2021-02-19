@@ -5,9 +5,9 @@
 
 # Main preamble
 Summary: Miscelaneous plugins for Slurm open source scheduler
-Name: %{name}
-Version: %{version}
-Release:  1%{?dist}.edf
+Name: slurm-llnl-misc-plugins
+Version: 1.2.4
+Release: 2%{?dist}.edf
 Source0: %{name}-%{version}.tar.gz
 License: GPLv3
 Group: Application/System
@@ -220,6 +220,9 @@ The database is dumped in a local directory with the mysqldump tool.
 %config /etc/slurm/slurmdbd-backup.vars
 
 %changelog
+* Thu Feb 19 2021 Thomas Hamel <thomas-t.hamel@edf.fr> 1.2.4-2el8.edf
+- Change version tag to work with jenkins
+
 * Thu Feb 18 2021 Thomas Hamel <thomas-t.hamel@edf.fr> 1.2.4-1el8.edf
 - bump to 1.2.4
 - Add renewer for lustre kerberos

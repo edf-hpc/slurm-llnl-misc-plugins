@@ -25,7 +25,7 @@ if [[ -z "$KRB5CCNAME" ]]
 then
   # That's not good, we can't do much, if there is already a valid
   # credential cache in the canonical path that might work.
-  echo "No KRB5CCNAME defined" >&2
+  echo "No KRB5CCNAME defined" | logger -s
   klist >&2
 else
   if [[ $KRB5CCNAME != "FILE:${canonical_ccache}" ]]
@@ -37,8 +37,16 @@ else
 fi
 
 # Launch a background renewer for this canonical cache using auks
+if ! systemctl --user is-active auks-renewer
+then
+  systemd-run --user --unit=auks-renewer auks -R loop -C "${canonical_ccache}"
+else
+  echo "auks-renewer unit is already running" |logger -s
+fi
 
-systemd-run --user auks -R loop -C "${canonical_ccache}"
+# Put some context in the logs
+klist |logger
+klist -C "${canonical_ccache}" |logger
 
 # And now the confusing part
 

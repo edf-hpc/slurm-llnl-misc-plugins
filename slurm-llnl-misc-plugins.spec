@@ -1,13 +1,13 @@
 # Configuration Logic
 %define name slurm-llnl-misc-plugins
-%define version 1.2.4
+%define version 1.2.5
 %define debug_package %{nil}
 
 # Main preamble
 Summary: Miscelaneous plugins for Slurm open source scheduler
 Name: slurm-llnl-misc-plugins
-Version: 1.2.4
-Release: 2%{?dist}.edf
+Version: 1.2.5
+Release: 1%{?dist}.edf
 Source0: %{name}-%{version}.tar.gz
 License: GPLv3
 Group: Application/System
@@ -38,6 +38,7 @@ install -m 755 Epilog.d/00_clean %{buildroot}/usr/lib/slurm/generic-scripts/Epil
 
 # slurm-llnl-generic-scripts-plugin-lgssc
 install -m 755 TaskProlog.d/kerberos_lustre.sh %{buildroot}/usr/lib/slurm/generic-scripts/TaskProlog.d
+install -m 755 TaskEpilog.d/kerberos_lustre.sh %{buildroot}/usr/lib/slurm/generic-scripts/TaskEpilog.d
 
 # slurm-llnl-job-submit-plugin
 mkdir -p %{buildroot}/etc/slurm/wckeysctl
@@ -169,7 +170,7 @@ The database is dumped in a local directory with the mysqldump tool.
 /usr/lib/slurm/generic-scripts/PrologSlurmctld.d
 /usr/lib/slurm/generic-scripts/Epilog.d
 /usr/lib/slurm/generic-scripts/SrunEpilog.d
-/usr/lib/slurm/generic-scripts/TaskEpilog.d
+%dir /usr/lib/slurm/generic-scripts/TaskEpilog.d
 /usr/lib/slurm/generic-scripts/EpilogSlurmctld.d
 /usr/lib/slurm/generic-scripts/Epilog.sh
 /usr/lib/slurm/generic-scripts/EpilogSlurmctld.sh
@@ -183,6 +184,7 @@ The database is dumped in a local directory with the mysqldump tool.
 %files -n slurm-llnl-generic-scripts-plugin-lgssc
 %defattr(-,root,root,-)
 /usr/lib/slurm/generic-scripts/TaskProlog.d/kerberos_lustre.sh
+/usr/lib/slurm/generic-scripts/TaskEpilog.d/kerberos_lustre.sh
 
 # slurm-llnl-job-submit-plugin
 %files -n slurm-llnl-job-submit-plugin
@@ -220,6 +222,10 @@ The database is dumped in a local directory with the mysqldump tool.
 %config /etc/slurm/slurmdbd-backup.vars
 
 %changelog
+* Thu Feb 19 2021 Thomas Hamel <thomas-t.hamel@edf.fr> 1.2.5-1el8.edf
+- Bump to 1.2.5
+- improive kerberos prolog epilog scripts
+
 * Thu Feb 19 2021 Thomas Hamel <thomas-t.hamel@edf.fr> 1.2.4-2el8.edf
 - Change version tag to work with jenkins
 

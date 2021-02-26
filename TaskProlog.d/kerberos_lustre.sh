@@ -37,6 +37,8 @@ else
 fi
 
 # Launch a background renewer for this canonical cache using auks
+#   Permits to talk to the systemctl user instance
+export XDG_RUNTIME_DIR="/run/user/${user_numerical_id}"
 if ! systemctl --user is-active auks-renewer
 then
   systemd-run --user --unit=auks-renewer auks -R loop -C "${canonical_ccache}"

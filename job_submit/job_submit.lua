@@ -397,6 +397,10 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
 
       if job_desc.partition == nil then
          job_desc.partition = partition
+      elseif job_desc.partition ~= partition then
+         log_error("slurm_job_submit: partition %s specified by user doesn't match QOS %s",
+            job_desc.partition, job_desc.qos)
+         return slurm.ESLURM_INVALID_PARTITION_NAME
       end
    else
       -- The user did not set the QOS explicitely

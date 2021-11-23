@@ -332,6 +332,8 @@ NULL           = 4294967294  -- numeric nil
 INFINITE       = 4294967294  -- max unsigned 32 bits integer value for slurm
 CORES_PER_NODE = 4
 ENFORCE_ACCOUNT = false      -- check qos/account compatibility, default to no
+JOB_NAME_REGEX  = "^[a-zA-Z0-9-_]+$"
+JOB_NAME_MAXLEN = 40
 
 -- cf. slurm/slurm_errno.h
 ESLURM_INVALID_WCKEY = 2057
@@ -363,6 +365,18 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
    status = track_wckey(job_desc, part_list, submit_uid, username)
    if status ~= 0 then
       return status
+   end
+
+   if string.match(job_desc.name, JOB_NAME_REGEX) == nil then
+      log_error("slurm_job_submit: job name '%s' doesn't match allowed regexp ('%s')",
+         job_desc.name, JOB_NAME_REGEX)
+      return slurm.ESLURM_BAD_NAME
+   end
+
+   if string.len(job_desc.name) > JOB_NAME_MAXLEN then
+      log_error("slurm_job_submit: job name '%s' length (%d) is larger than allowed (%d)",
+         job_desc.name, string.len(job_desc.name), JOB_NAME_MAXLEN)
+      return slurm.ESLURM_BAD_NAME
    end
 
    local qos_list, qos_accounts = build_qos_list()

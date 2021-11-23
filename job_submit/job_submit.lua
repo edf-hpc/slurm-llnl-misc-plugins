@@ -175,10 +175,12 @@ end
 
 function build_qos_list ()
    -- Read QOS configuration from sacctmgr command and create a multi-dimension table
-   -- qos_list[qos_name][qos_maxcpus][qos_duration] = qos_name
+   -- qos_list[qos_partition][qos_maxcpus][qos_duration] = qos_name
    -- qos_accounts[qos_name] = { account1, account2, etc }
+   -- qos[qos_name] = { duration: 1234, maxcpus: 1234}
    local qos_list = {}
    local qos_accounts = {}
+   local qos = {}
    local qos_rec = {}
    local qos_name
    local qos_duration
@@ -199,9 +201,9 @@ function build_qos_list ()
       local t = {}
       -- QOS information
       t = split(line, QOS_SEP)
-      qos_name=t[1]
-      qos_duration=to_minute(t[2])
-      qos_maxcpus=t[3]
+      qos_name = t[1]
+      qos_duration = to_minute(t[2])
+      qos_maxcpus = t[3]
       if qos_maxcpus == nil or qos_maxcpus == '' then
          qos_maxcpus = tostring(INFINITE)
       end
@@ -210,14 +212,19 @@ function build_qos_list ()
       end
 
       if qos_duration == '' then
-         qos_duration=to_minute(4000000000)
+         qos_duration = to_minute(4000000000)
       end
 
       if qos_duration ~= nil and qos_maxcpus ~=nil
       then
          -- QOS name
          t = split(qos_name, QOS_NAME_SEP)
-         qos_partition=t[1]
+         qos_partition = t[1]
+
+         qos[qos_name] = {
+            duration = qos_duration,
+            maxcpus  = qos_maxcpus,
+         }
 
          qos_list = addToSet(qos_list, qos_partition)
          qos_list[qos_partition] = addToSet(qos_list[qos_partition], qos_maxcpus)
@@ -251,7 +258,7 @@ function build_qos_list ()
       end
    end
 
-   return qos_list, qos_accounts
+   return qos_list, qos_accounts, qos
 
 end
 
@@ -379,7 +386,7 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
       return slurm.ESLURM_BAD_NAME
    end
 
-   local qos_list, qos_accounts = build_qos_list()
+   local qos_list, qos_accounts, qos = build_qos_list()
    -- if unable to build QOS list, return ESLURM_INVALID_QOS
    if qos_list == nil then
       return ESLURM_INVALID_QOS
@@ -511,6 +518,14 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
          job_desc.qos = found_qos_name
       end
 
+   end
+
+   -- check time limit
+   if qos[job_desc.qos] ~= nil and qos[job_desc.qos][duration] ~= nil and
+         job_desc.time_limit ~= nil and job_desc.time_limit > qos[job_desc.qos][duration] then
+      log_error("slurm_job_submit: job time limit (%u) is larger than QOS %s limit (%u)",
+         job_desc.time_limit, found_qos_name, qos[job_desc.qos][duration])
+      return slurm.ESLURM_INVALID_TIME_LIMIT
    end
 
    slurm.log_info("slurm_job_submit: job from user:%s/%u account:%s minutes:%u cores:%u-%u nodes:%u-%u shared:%u partition:%s QOS:%s",

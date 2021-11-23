@@ -298,7 +298,7 @@ function track_wckey (job_desc, part_list, submit_uid, username)
       -- if WCKEY_USER_EXCEPTION_FILE does not exist or username name not found, return wckey error
       slurm.log_info("track_wckey: job from user:%s/%u didn't specify any valid wckey.",
                      username, submit_uid)
-      return ESLURM_INVALID_WCKEY
+      return slurm.ESLURM_INVALID_WCKEY
    else
      -- Convert wckey to lowercase  --
      job_desc.wckey = string.lower(job_desc.wckey)
@@ -311,7 +311,7 @@ function track_wckey (job_desc, part_list, submit_uid, username)
         -- wckey not found, return wckey error
         slurm.log_info("track_wckey: job from user:%s/%u did specify an invalid wckey:%s",
                        username, submit_uid, showstring(job_desc.wckey))
-        return ESLURM_INVALID_WCKEY
+        return slurm.ESLURM_INVALID_WCKEY
      end
    end
 
@@ -343,9 +343,6 @@ JOB_NAME_REGEX  = "^[a-zA-Z0-9-_]+$"
 JOB_NAME_MAXLEN = 40
 
 -- cf. slurm/slurm_errno.h
-ESLURM_INVALID_WCKEY = 2057
-ESLURM_INVALID_QOS = 2066
-ESLURM_INVALID_ACCOUNT = 2045
 WCKEY_CONF_FILE = CONF_DIR .. "/wckeysctl/wckeys"
 WCKEY_USER_EXCEPTION_FILE = CONF_DIR .. "/wckeysctl/wckeys_user_exception"
 
@@ -389,7 +386,7 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
    local qos_list, qos_accounts, qos = build_qos_list()
    -- if unable to build QOS list, return ESLURM_INVALID_QOS
    if qos_list == nil then
-      return ESLURM_INVALID_QOS
+      return slurm.ESLURM_INVALID_QOS
    end
 
    local maxtime
@@ -458,7 +455,7 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
              if job_desc.default_account == nil then
                 slurm.log_info("slurm_job_submit: user %s has no default account, unable to assign default account.",
                                username)
-                return ESLURM_INVALID_ACCOUNT
+                return slurm.ESLURM_INVALID_ACCOUNT
              else
                 slurm.log_info("slurm_job_submit: no account specified by user %s, using default account %s.",
                                username, job_desc.default_account)

@@ -35,18 +35,6 @@
 
 --========================================================================--
 
-function showstring(key)
-   -- If the string key is not define, return the string nil
-   -- that is useful to avoid lua error message
-   if key == nil then
-      return "nil"
-   else
-      return key
-   end
-end
-
---========================================================================--
-
 function addToSet(set, key)
    -- Add an element in the table, if it has not already be added
    -- set   : table where the element is to be added
@@ -305,12 +293,12 @@ function track_wckey (job_desc, part_list, submit_uid, username)
      if line_present(WCKEY_CONF_FILE, job_desc.wckey) then
         -- wckey present in file, return OK
         slurm.log_info("track_wckey: job from user:%s/%u with wckey=%s.",
-                       username, submit_uid, showstring(job_desc.wckey))
+                       username, submit_uid, tostring(job_desc.wckey))
         return 0
      else
         -- wckey not found, return wckey error
         slurm.log_info("track_wckey: job from user:%s/%u did specify an invalid wckey:%s",
-                       username, submit_uid, showstring(job_desc.wckey))
+                       username, submit_uid, tostring(job_desc.wckey))
         return slurm.ESLURM_INVALID_WCKEY
      end
    end
@@ -528,15 +516,15 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
    slurm.log_info("slurm_job_submit: job from user:%s/%u account:%s minutes:%u cores:%u-%u nodes:%u-%u shared:%u partition:%s QOS:%s",
                   username,
                   submit_uid,
-                  showstring(job_desc.account),
+                  tostring(job_desc.account),
                   job_desc.time_limit,
                   job_desc.min_cpus,
                   job_desc.max_cpus,
                   job_desc.min_nodes,
                   job_desc.max_nodes,
                   job_desc.shared,
-                  showstring(job_desc.partition),
-                  showstring(job_desc.qos))
+                  tostring(job_desc.partition),
+                  tostring(job_desc.qos))
 
    return slurm.SUCCESS
 end

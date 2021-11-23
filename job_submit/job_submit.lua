@@ -310,6 +310,13 @@ function track_wckey (job_desc, part_list, submit_uid, username)
 
 end
 
+-- log and return information to the user
+function log_error(s, ...)
+   local msg = s:format(...)
+   slurm.log_info(msg)
+   slurm.user_msg(msg)
+end
+
 --########################################################################--
 --
 --  Define main parameters (can be overriden in conf_file)

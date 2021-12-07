@@ -198,7 +198,7 @@ def run_or_die(cmd):
     """
     Run a command. If it returns an error and we're not in dry mode, die
     """
-    logger.debug("run: {cmd}".format(cmd=' '.join(cmd)))
+    logger.debug("run: %s", ' '.join(cmd))
     if args.dry_run is False:
         returncode = subprocess.call(cmd)
         if returncode:
@@ -254,7 +254,7 @@ def check_acct(name):
     Returns True if it does
     """
     cmd = ['sacctmgr', '-n', 'show', 'Account', name]
-    logger.debug("run: {cmd}".format(cmd=' '.join(cmd)))
+    logger.debug("run: %s", ' '.join(cmd))
     output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
     return len(output) > 0
 
@@ -262,7 +262,7 @@ def create_acct(name, desc):
     """
     Create slurm account
     """
-    logger.info("creating account {acct}".format(acct=name))
+    logger.info("creating account %s", name)
     cmd = ['sacctmgr', '-i', 'add', 'account', name,
            "Cluster='{cluster}'".format(cluster=conf.cluster),
            "Description='{desc}'".format(desc=desc),
@@ -282,7 +282,7 @@ def remove_acct(name):
     """
     Remove slurm account
     """
-    logger.info("deleting account {acct}".format(acct=name))
+    logger.info("deleting account %s", name)
     cmd = ['sacctmgr', '-i', 'delete', 'account', name]
     run_or_die(cmd)
 
@@ -290,7 +290,7 @@ def create_user(name, account):
     """
     Create slurm user
     """
-    logger.info("creating user {user}".format(user=name))
+    logger.info("creating user %s", name)
     cmd = ['sacctmgr', '-i', 'add', 'user', name,
            "DefaultAccount={acct}".format(acct=account)]
     if conf.user_add_opts is not None:
@@ -301,7 +301,7 @@ def remove_user(name):
     """
     Remove slurm user
     """
-    logger.info("deleting user {user}".format(user=name))
+    logger.info("deleting user %s", name)
     cmd = ['sacctmgr', '-i', 'delete', 'user', name]
     run_or_die(cmd)
 
@@ -311,7 +311,7 @@ def get_slurm_users():
     """
     users = []
     cmd = ['sacctmgr', 'show', 'user', '--parsable', '--noheader']
-    logger.debug("run: {cmd}".format(cmd=' '.join(cmd)))
+    logger.debug("run: %s", ' '.join(cmd))
     output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0].decode('utf-8')
     reader = csv.reader(output.strip().split('\n'), delimiter='|')
     for row in reader:

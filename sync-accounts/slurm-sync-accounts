@@ -149,7 +149,6 @@ class Conf():
         if self.policy == 'multiple_accounts':
             # parse all account/* sections
             prefix = 'account/'
-            all_sections = parser.sections()
             for section in parser.sections():
                 if section.startswith(prefix):
                     acct_name = section[len(prefix):]

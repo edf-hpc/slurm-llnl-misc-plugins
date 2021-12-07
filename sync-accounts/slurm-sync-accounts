@@ -59,7 +59,7 @@ DEFAULT_CONF_FILE = '/etc/slurm/sync-accounts.conf'
 # SlurmDBD.
 IGNORED_SLURM_USERS = ['root']
 
-class User(object):
+class User():
     """
     User object definition
     """
@@ -76,7 +76,7 @@ class User(object):
 
         return hash(self.name)
 
-class Account(object):
+class Account():
     """
     Account object definition
     """
@@ -86,7 +86,7 @@ class Account(object):
         self.desc = desc
         self.groups = groups  # the posix groups associated to this account
 
-class Conf(object):
+class Conf():
     """
     Runtime configuration class
     """

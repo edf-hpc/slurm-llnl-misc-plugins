@@ -57,10 +57,12 @@ DEFAULT_CONF_FILE = '/etc/slurm/sync-accounts.conf'
 # This list specifies list of users that should normally be present in SlurmDBD
 # but not necessarily in users groups, and therefore should not be removed from
 # SlurmDBD.
-IGNORED_SLURM_USERS = [ 'root' ]
+IGNORED_SLURM_USERS = ['root']
 
 class User(object):
-
+    """
+    User object definition
+    """
     def __init__(self, name, group):
 
         self.name = name
@@ -75,7 +77,9 @@ class User(object):
         return hash(self.name)
 
 class Account(object):
-
+    """
+    Account object definition
+    """
     def __init__(self, name, desc, groups):
 
         self.name = name
@@ -83,8 +87,9 @@ class Account(object):
         self.groups = groups  # the posix groups associated to this account
 
 class Conf(object):
-    """Runtime configuration class"""
-
+    """
+    Runtime configuration class
+    """
     def __init__(self, filename=DEFAULT_CONF_FILE):
         self.filename = filename
         self.org = None
@@ -100,8 +105,9 @@ class Conf(object):
         self.accounts = []
 
     def parse(self):
-        """Parse the configuration file"""
-
+        """
+        Parse the configuration file
+        """
         if not os.path.isfile(self.filename):
             die("failed to parse config file {filename}" \
                 .format(filename=self.filename))
@@ -114,22 +120,22 @@ class Conf(object):
 
         self.policy = parser.get('main', 'policy')
 
-        available_policies = [ 'global_account',
-                               'multiple_accounts',
-                               'user_account' ]
+        available_policies = ['global_account',
+                              'multiple_accounts',
+                              'user_account']
 
         if not self.policy in available_policies:
             die("invalid policy {policy}" \
                 .format(policy=self.policy))
 
-        if self.policy in [ 'global_account', 'user_account']:
+        if self.policy in ['global_account', 'user_account']:
 
             # check deprecated group parameter
-            if not parser.has_option('main', 'groups') and \
-               parser.has_option('main','group'):
+            if (not parser.has_option('main', 'groups') and
+                    parser.has_option('main', 'group')):
                 logger.error('main/group parameter is deprecated, '
                              'use main/groups instead')
-                self.groups = [ parser.get('main', 'group') ]
+                self.groups = [parser.get('main', 'group')]
             else:
                 self.groups = parser.get('main', 'groups').split(',')
 
@@ -150,10 +156,10 @@ class Conf(object):
                     desc = parser.get(section, 'desc')
                     # check deprecated group parameter
                     if not parser.has_option(section, 'groups') and \
-                       parser.has_option(section,'group'):
+                       parser.has_option(section, 'group'):
                         logger.error("%s/group parameter is deprecated, "
                                      "use %s/groups instead", section, section)
-                        groups = [ parser.get(section, 'group') ]
+                        groups = [parser.get(section, 'group')]
                     else:
                         groups = parser.get(section, 'groups').split(',')
 
@@ -182,12 +188,16 @@ class Conf(object):
             pass
 
 def die(msg):
-
+    """
+    Logs a critical error message and dies
+    """
     logger.critical(msg)
     sys.exit(1)
 
 def run_or_die(cmd):
-
+    """
+    Run a command. If it returns an error and we're not in dry mode, die
+    """
     logger.debug("run: {cmd}".format(cmd=' '.join(cmd)))
     if args.dry_run is False:
         returncode = subprocess.call(cmd)
@@ -196,13 +206,17 @@ def run_or_die(cmd):
                 .format(cmd=' '.join(cmd), error=str(returncode)))
 
 def get_posix_group_users(group):
-
+    """
+    Given a group, returns users beins members of this group as a list of User()s
+    """
     logger.debug("searching for users in group %s", group)
     entry = grp.getgrnam(group)
-    return [ User(user.lower(), group) for user in entry[3] ]
+    return [User(user.lower(), group) for user in entry[3]]
 
 def get_posix_groups_users(groups):
-
+    """
+    Given a list of groups, returns users being members of these groups as a list of User()s
+    """
     users = []
 
     for group in groups:
@@ -211,9 +225,10 @@ def get_posix_groups_users(groups):
     return list(set(users))  # remove duplicates
 
 def get_posix_users():
-    """Return a list of Users members of the posix groups set in
-       configuration."""
-
+    """
+    Return a list of Users members of the posix groups set in
+    configuration.
+    """
     if len(conf.groups):
         return get_posix_groups_users(conf.groups)
 
@@ -221,64 +236,81 @@ def get_posix_users():
     users = []
     for account in conf.accounts:
         xusers = get_posix_groups_users(account.groups)
-        users.extend([ xuser for xuser in xusers if xuser not in users ])
+        users.extend([xuser for xuser in xusers if xuser not in users])
     return users
 
 def find_group_account(group):
-    """Return the account name corresponding to the group in parameter."""
+    """
+    Return the account name corresponding to the group in parameter.
+    """
     for account in conf.accounts:
         if group in account.groups:
             return account.name
     raise IndexError("no account found for group %s" % (group))
 
 def check_acct(name):
-
-    cmd = [ 'sacctmgr', '-n', 'show', 'Account', name ]
+    """
+    Check if an account exists in slurm
+    Returns True if it does
+    """
+    cmd = ['sacctmgr', '-n', 'show', 'Account', name]
     logger.debug("run: {cmd}".format(cmd=' '.join(cmd)))
     output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
     return len(output) > 0
 
 def create_acct(name, desc):
-
+    """
+    Create slurm account
+    """
     logger.info("creating account {acct}".format(acct=name))
     cmd = ['sacctmgr', '-i', 'add', 'account', name,
            "Cluster='{cluster}'".format(cluster=conf.cluster),
            "Description='{desc}'".format(desc=desc),
-           "Organization='{org}'".format(org=conf.org) ]
+           "Organization='{org}'".format(org=conf.org)]
     if conf.acct_add_opts is not None:
         cmd.extend(conf.acct_add_opts)
     run_or_die(cmd)
 
 def ensure_acct(name, desc):
-
+    """
+    Create slurm account if it doesn't already exist
+    """
     if check_acct(name) is False:
         create_acct(name, desc)
 
 def remove_acct(name):
-
+    """
+    Remove slurm account
+    """
     logger.info("deleting account {acct}".format(acct=name))
-    cmd = [ 'sacctmgr', '-i', 'delete', 'account', name ]
+    cmd = ['sacctmgr', '-i', 'delete', 'account', name]
     run_or_die(cmd)
 
 def create_user(name, account):
-
+    """
+    Create slurm user
+    """
     logger.info("creating user {user}".format(user=name))
-    cmd = [ 'sacctmgr', '-i', 'add', 'user', name,
-            "DefaultAccount={acct}".format(acct=account) ]
+    cmd = ['sacctmgr', '-i', 'add', 'user', name,
+           "DefaultAccount={acct}".format(acct=account)]
     if conf.user_add_opts is not None:
         cmd.extend(conf.user_add_opts)
     run_or_die(cmd)
 
 def remove_user(name):
-
+    """
+    Remove slurm user
+    """
     logger.info("deleting user {user}".format(user=name))
-    cmd = [ 'sacctmgr', '-i', 'delete', 'user', name ]
+    cmd = ['sacctmgr', '-i', 'delete', 'user', name]
     run_or_die(cmd)
 
 def get_slurm_users():
-
+    """
+    Returns a list of users existing in slurm
+    """
     users = []
-    cmd = [ 'sacctmgr', 'show', 'user', '--parsable', '--noheader' ]
+    cmd = ['sacctmgr', 'show', 'user', '--parsable', '--noheader']
     logger.debug("run: {cmd}".format(cmd=' '.join(cmd)))
     output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0].decode('utf-8')
     reader = csv.reader(output.strip().split('\n'), delimiter='|')
@@ -290,15 +322,20 @@ def get_slurm_users():
     return users
 
 def parse_args():
-
+    """
+    Parse command line arguments
+    """
     global args
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dry-run", help="Do nothing, just print what it would do.", action="store_true")
+    parser.add_argument("--dry-run", help="Do nothing, just print what it would do.",
+                        action="store_true")
     parser.add_argument("--debug", help="Debug mode.", action="store_true")
     args = parser.parse_args()
 
 def init_logger():
-
+    """
+    Init the logger
+    """
     global logger
     logger = logging.getLogger(__file__)
     if args.debug is True:
@@ -317,7 +354,9 @@ def init_logger():
     logger.addHandler(handler)
 
 def main():
-
+    """
+    The real main
+    """
     global conf
 
     parse_args()
@@ -345,7 +384,7 @@ def main():
                 create_user(user.name, acct)
 
     for user in users_slurm:
-        posix_user_names = [ xuser.name for xuser in users_posix ]
+        posix_user_names = [xuser.name for xuser in users_posix]
         if user not in posix_user_names:
             # delete user and eventually account
             remove_user(user)

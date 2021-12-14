@@ -209,7 +209,8 @@ def run_or_die(cmd):
 
 def get_posix_group_users(group):
     """
-    Given a group, returns users beins members of this group as a list of User()s
+    Given a group, returns users beins members of this group as a list of
+    User()s
     """
     logger.debug("searching for users in group %s", group)
     entry = grp.getgrnam(group)
@@ -217,7 +218,8 @@ def get_posix_group_users(group):
 
 def get_posix_groups_users(groups):
     """
-    Given a list of groups, returns users being members of these groups as a list of User()s
+    Given a list of groups, returns users being members of these groups as a
+    list of User()s
     """
     users = []
 
@@ -228,18 +230,24 @@ def get_posix_groups_users(groups):
 
 def get_posix_users():
     """
-    Return a list of Users members of the posix groups set in
+    Return a dict of users who are members of the posix groups set in
     configuration.
     """
+    res = {}
     if conf.groups:
-        return get_posix_groups_users(conf.groups)
+        for user in get_posix_groups_users(conf.groups):
+            if user.name not in res:
+                res[user.name] = []
+            res[user.name].append(user)
+        return res
 
     # merge users of all groups found in conf.accounts
-    users = []
     for account in conf.accounts:
-        xusers = get_posix_groups_users(account.groups)
-        users.extend([xuser for xuser in xusers if xuser not in users])
-    return users
+        for user in get_posix_groups_users(account.groups):
+            if user.name not in res:
+                res[user.name] = []
+            res[user.name].append(user)
+    return res
 
 def find_group_account(group):
     """
@@ -292,9 +300,9 @@ def create_user(name, account):
     """
     Create slurm user
     """
-    logger.info("creating user %s", name)
+    logger.info("creating user %s with account %s", name, account)
     cmd = ['sacctmgr', '-i', 'add', 'user', name,
-           "DefaultAccount={acct}".format(acct=account)]
+           f'DefaultAccount={account}']
     if conf.user_add_opts is not None:
         cmd.extend(conf.user_add_opts)
     run_or_die(cmd)
@@ -307,19 +315,45 @@ def remove_user(name):
     cmd = ['sacctmgr', '-i', 'delete', 'user', name]
     run_or_die(cmd)
 
+def remove_user_account(name, account):
+    """
+    Remove slurm user using a specific account
+    """
+    logger.info("deleting user %s with account %s", name, account)
+    cmd = ['sacctmgr', '-i', 'delete', 'user', name, 'where',
+           f'account={account}']
+    run_or_die(cmd)
+
 def get_slurm_users():
     """
-    Returns a list of users existing in slurm
+    Returns a dict for users existing in slurm
     """
-    users = []
+    users = {}
+    associations = {}
+    cmd = ['sacctmgr', 'show', 'association', '--parsable', '--noheader']
+    logger.debug("run: %s", ' '.join(cmd))
+    output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0].decode('utf-8')
+    reader = csv.reader(output.strip().split('\n'), delimiter='|')
+
+    for row in reader:
+        account = row[1]
+        user = row[2]
+        if not user or not account:
+            continue
+        if user not in associations:
+            associations[user] = []
+        associations[user].append(account)
+
     cmd = ['sacctmgr', 'show', 'user', '--parsable', '--noheader']
     logger.debug("run: %s", ' '.join(cmd))
     output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0].decode('utf-8')
     reader = csv.reader(output.strip().split('\n'), delimiter='|')
+
     for row in reader:
         user = row[0]
-        if user not in IGNORED_SLURM_USERS:
-            users.append(user)
+        if user in IGNORED_SLURM_USERS:
+            continue
+        users[user] = list(associations[user])
 
     return users
 
@@ -374,24 +408,56 @@ def main():
     users_posix = get_posix_users()
     users_slurm = get_slurm_users()
 
-    for user in users_posix:
-        if user.name not in users_slurm:
+    slurm_user_names = users_slurm.keys()
+    for name, users in users_posix.items():
+        for user in users:
+            if name in slurm_user_names:
+                continue
+
             # create user and eventually account
             if conf.policy == 'user_account':
-                acct_desc = "user {user} default account".format(user=user.name)
-                create_acct(user.name, acct_desc)
-                create_user(user.name, user.name)
+                create_acct(user.name, f'user {name} default account')
+                acct = name
             elif conf.policy in ['global_account', 'multiple_accounts']:
                 acct = find_group_account(user.group)
-                create_user(user.name, acct)
+            create_user(name, acct)
 
-    for user in users_slurm:
-        posix_user_names = [xuser.name for xuser in users_posix]
-        if user not in posix_user_names:
-            # delete user and eventually account
-            remove_user(user)
+    posix_user_names = users_posix.keys()
+    for name, accounts in users_slurm.items():
+        # While a user might have multiple associations (as in different accounts),
+        # if it doesn't exist in Unix, we can delete it in one go
+        if name not in posix_user_names:
+            remove_user(name)
             if conf.policy == 'user_account':
-                remove_acct(user)
+                remove_acct(name)
+            continue
+
+        # The slurm user exists in unix, check if its accounts are correct
+        if conf.policy == 'user_account':
+            found_accounts = [name]
+        elif conf.policy in ['global_account', 'multiple_accounts']:
+            found_accounts = []
+            for user in users_posix[name]:
+                found_accounts.append(find_group_account(user.group))
+            found_accounts = sorted(found_accounts)
+
+        # We can't modify a user's association, the only way is to create a new
+        # user and to delete the old one. The man page says:
+        #
+        # ===8<===8<===8<===8<===8<===8<===8<===8<===8<===8<===8<===8<===8<===
+        # association
+        # Add, modify, and delete should be done to a user, account or cluster
+        # entity.  This will in-turn update the underlying associations.
+        # ===8<===8<===8<===8<===8<===8<===8<===8<===8<===8<===8<===8<===8<===
+        for account in found_accounts:
+            if account not in accounts:
+                create_user(name, account)
+
+        # This gives us a list of extra slurm accounts the user shouldn't have
+        extra_accounts = list(set(accounts).difference(found_accounts))
+
+        for account in extra_accounts:
+            remove_user_account(name, account)
 
 if __name__ == '__main__':
 

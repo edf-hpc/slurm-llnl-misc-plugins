@@ -268,8 +268,8 @@ function line_present(file, search)
 end
 
 -- check wckey among WCKEY_CONF_FILE and WCKEY_USER_EXCEPTION_FILE
-function track_wckey (job_desc, part_list, submit_uid, username)
-
+function track_wckey (job_desc, part_list, submit_uid)
+   username = job_desc.username
    -- if WCKEY_CONF_FILE does not exist, return OK
    if not file_exists(WCKEY_CONF_FILE) then
      return 0
@@ -343,7 +343,6 @@ else
    dofile(conf_file)
 end
 
-
 --########################################################################--
 --
 --  SLURM job_submit/lua interface:
@@ -352,9 +351,7 @@ end
 
 function slurm_job_submit ( job_desc, part_list, submit_uid )
 
-   username = job_desc.user_name
-
-   status = track_wckey(job_desc, part_list, submit_uid, username)
+   status = track_wckey(job_desc, part_list, submit_uid)
    if status ~= 0 then
       return status
    end
@@ -442,15 +439,15 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
           if job_desc.account == nil then
              if job_desc.default_account == nil then
                 slurm.log_info("slurm_job_submit: user %s has no default account, unable to assign default account.",
-                               username)
+                   job_desc.user_name)
                 return slurm.ESLURM_INVALID_ACCOUNT
              else
                 slurm.log_info("slurm_job_submit: no account specified by user %s, using default account %s.",
-                               username, job_desc.default_account)
+                   job_desc.user_name, job_desc.default_account)
                 job_desc.account = job_desc.default_account
              end
           else
-             slurm.log_info("slurm_job_submit: account %s specified by user %s.", job_desc.account, username)
+             slurm.log_info("slurm_job_submit: account %s specified by user %s.", job_desc.account, job_desc.user_name)
           end
       end
 
@@ -514,17 +511,17 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
    end
 
    slurm.log_info("slurm_job_submit: job from user:%s/%u account:%s minutes:%u cores:%u-%u nodes:%u-%u shared:%u partition:%s QOS:%s",
-                  username,
-                  submit_uid,
-                  tostring(job_desc.account),
-                  job_desc.time_limit,
-                  job_desc.min_cpus,
-                  job_desc.max_cpus,
-                  job_desc.min_nodes,
-                  job_desc.max_nodes,
-                  job_desc.shared,
-                  tostring(job_desc.partition),
-                  tostring(job_desc.qos))
+      job_desc.user_name,
+      submit_uid,
+      tostring(job_desc.account),
+      job_desc.time_limit,
+      job_desc.min_cpus,
+      job_desc.max_cpus,
+      job_desc.min_nodes,
+      job_desc.max_nodes,
+      job_desc.shared,
+      tostring(job_desc.partition),
+      tostring(job_desc.qos))
 
    return slurm.SUCCESS
 end

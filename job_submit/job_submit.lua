@@ -178,6 +178,8 @@ function build_qos_list ()
       qos_maxcpus = t[3]
       if qos_maxcpus == nil or qos_maxcpus == '' then
          qos_maxcpus = tostring(INFINITE)
+      else
+         qos_maxcpus = tonumber(qos_maxcpus)
       end
       if ENFORCE_ACCOUNT then
          accounts = split(t[4], ACCOUNTS_SEP)
@@ -185,6 +187,8 @@ function build_qos_list ()
 
       if qos_duration == '' then
          qos_duration = to_minute(4000000000)
+      else
+         qos_duration = tonumber(qos_duration)
       end
 
       if qos_duration ~= nil and qos_maxcpus ~=nil
@@ -220,21 +224,6 @@ function build_qos_list ()
    end -- for loop
 
    io.close(qos_rec)
-
-   -- Sort  all tables
-   if qos_list ~= nil then
-      -- table.sort(qos_list, function(a,b) return a < b end) -- sort qos (optional)
-      for i, qos in ipairs(qos_list) do
-         if qos_list[qos] ~= nil then
-            table.sort(qos_list[qos], function(a,b) return tonumber(a) < tonumber(b) end) --sort maxcpus
-                       for j, maxcpus in ipairs(qos_list[qos]) do
-               if qos_list[qos][maxcpus] ~= nil then
-                  table.sort(qos_list[qos][maxcpus], function(a,b) return tonumber(a) < tonumber(b) end) --sort duration
-               end
-            end
-         end
-      end
-   end
 
    return qos_list, qos_accounts, qos
 

@@ -177,7 +177,7 @@ function build_qos_list ()
       qos_duration = to_minute(t[2])
       qos_maxcpus = t[3]
       if qos_maxcpus == nil or qos_maxcpus == '' then
-         qos_maxcpus = tostring(INFINITE)
+         qos_maxcpus = INFINITE
       else
          qos_maxcpus = tonumber(qos_maxcpus)
       end
@@ -226,7 +226,6 @@ function build_qos_list ()
    io.close(qos_rec)
 
    return qos_list, qos_accounts, qos
-
 end
 
 -- see if the file exists

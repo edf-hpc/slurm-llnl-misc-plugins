@@ -415,12 +415,17 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
       else
          -- If the user did not set the partition, set the default
          -- partition in slurm configuration
-         for name, part in pairs(part_list) do
+         for _, part in pairs(part_list) do
             if part.flag_default == 1 then
                job_desc.partition = part.name
                break
             end
          end
+         if job_desc.partition ~= nil then
+            log_error("slurm_job_submit: couldn't find a default partition")
+            return slurm.ESLURM_DEFAULT_PARTITION_NOT_SET
+         end
+         slurm.log_info("slurm_job_submit: using default partition %s.", job_desc.partition)
       end
 
       -- if ENFORCE_ACCOUNT is true and job account is not specified, set its

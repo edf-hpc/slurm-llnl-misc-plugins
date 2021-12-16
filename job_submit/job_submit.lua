@@ -147,11 +147,14 @@ end
 
 function build_qos_list ()
    -- Read QOS configuration from sacctmgr command and create a multi-dimension table
-   -- qos_list[qos_partition][qos_maxcpus][qos_duration] = qos_name
-   -- qos_accounts[qos_name] = { account1, account2, etc }
-   -- qos[qos_name] = { duration: 1234, maxcpus: 1234}
+   -- qos_list[qos_partition][qos_maxcpus][qos_duration][qos_name] = [account_1, ..., account_n]
+   -- qos[qos_name] = {
+   --   accounts: [account_1, ..., account_n],
+   --   duration: 1234,
+   --   maxcpus: 1234
+   --   partition: somepart,
+   -- }
    local qos_list = {}
-   local qos_accounts = {}
    local qos = {}
    local qos_rec = {}
    local qos_name
@@ -181,9 +184,7 @@ function build_qos_list ()
       else
          qos_maxcpus = tonumber(qos_maxcpus)
       end
-      if ENFORCE_ACCOUNT then
-         accounts = split(t[4], ACCOUNTS_SEP)
-      end
+      accounts = split(t[4], ACCOUNTS_SEP)
 
       if qos_duration == '' then
          qos_duration = to_minute(4000000000)
@@ -198,8 +199,10 @@ function build_qos_list ()
          qos_partition = t[1]
 
          qos[qos_name] = {
-            duration = qos_duration,
-            maxcpus  = qos_maxcpus,
+            accounts  = accounts,
+            duration  = qos_duration,
+            maxcpus   = qos_maxcpus,
+            partition = qos_partition,
          }
 
          if qos_list[qos_partition] == nil then
@@ -211,21 +214,13 @@ function build_qos_list ()
          if qos_list[qos_partition][qos_maxcpus][qos_duration] == nil then
             qos_list[qos_partition][qos_maxcpus][qos_duration] = {}
          end
-         table.insert(qos_list[qos_partition][qos_maxcpus][qos_duration], qos_name)
-
-         if ENFORCE_ACCOUNT then
-            if qos_accounts[qos_name] == nil then
-               qos_accounts[qos_name] = accounts
-            else
-               qos_accounts[qos_name] = extendTable(qos_accounts[qos_name], accounts)
-            end
-         end
+         qos_list[qos_partition][qos_maxcpus][qos_duration][qos_name] = accounts
       end
    end -- for loop
 
    io.close(qos_rec)
 
-   return qos_list, qos_accounts, qos
+   return qos_list, qos
 end
 
 -- see if the file exists
@@ -346,7 +341,7 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
       return slurm.ESLURM_BAD_NAME
    end
 
-   local qos_list, qos_accounts, qos = build_qos_list()
+   local qos_list, qos = build_qos_list()
    -- if unable to build QOS list, return ESLURM_INVALID_QOS
    if qos_list == nil then
       return slurm.ESLURM_INVALID_QOS

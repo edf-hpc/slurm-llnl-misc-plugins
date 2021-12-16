@@ -35,22 +35,6 @@
 
 --========================================================================--
 
-function addToSet(set, key)
-   -- Add an element in the table, if it has not already be added
-   -- set   : table where the element is to be added
-   -- key   : element to be added
-   if set == nil then -- if not exist, set must be created
-      set = {}
-   end
-
-   if set[key] == nil then -- the key is added if not already added
-      table.insert(set, key)
-   end
-   return set
-end
-
---========================================================================--
-
 function extendTable(t1, t2)
    -- Extend table t1 with values of t2
    for k,v in ipairs(t2) do
@@ -214,10 +198,16 @@ function build_qos_list ()
             maxcpus  = qos_maxcpus,
          }
 
-         qos_list = addToSet(qos_list, qos_partition)
-         qos_list[qos_partition] = addToSet(qos_list[qos_partition], qos_maxcpus)
-         qos_list[qos_partition][qos_maxcpus] = addToSet(qos_list[qos_partition][qos_maxcpus], qos_duration)
-         qos_list[qos_partition][qos_maxcpus][qos_duration] = addToSet(qos_list[qos_partition][qos_maxcpus][qos_duration], qos_name)
+         if qos_list[qos_partition] == nil then
+            qos_list[qos_partition] = {}
+         end
+         if qos_list[qos_partition][qos_maxcpus] == nil then
+            qos_list[qos_partition][qos_maxcpus] = {}
+         end
+         if qos_list[qos_partition][qos_maxcpus][qos_duration] == nil then
+            qos_list[qos_partition][qos_maxcpus][qos_duration] = {}
+         end
+         table.insert(qos_list[qos_partition][qos_maxcpus][qos_duration], qos_name)
 
          if ENFORCE_ACCOUNT then
             if qos_accounts[qos_name] == nil then

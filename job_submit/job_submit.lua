@@ -104,19 +104,19 @@ function to_minute(inputstr)
 
    if inputstr ~= nil then
       -- Test if a day is indicated (string separated by "-"
-      d, t = string.match(inputstr, "^(%d*)-(.*)$")
+      d, t = string.match(inputstr, "^(%d+)-(.*)$")
 
       if d == nil then -- no day indicated
-         m = string.match(inputstr, "^(%d*)$")
+         m = string.match(inputstr, "^(%d+)$")
          if m ~= nil then  -- minutes indicated
             return m
          else
-            m, s = string.match(inputstr, "^(%d*):(%d*)$")
+            m, s = string.match(inputstr, "^(%d+):(%d+)$")
             if m ~= nil and s ~= nil then -- minutes:seconds indicated
                -- seconds ceiled to one minute if greater than 1
                return m + math.ceil(s/60)
             else
-               h, m, s = string.match(inputstr, "^(%d*):(%d*):(%d*)$")
+               h, m, s = string.match(inputstr, "^(%d+):(%d+):(%d+)$")
                if h ~= nil and m ~= nil and s ~= nil then -- hours:minutes:seconds indicated
                   -- second ceiled to one minute if greater than 1
                   return h * 60 + m + math.ceil(s/60)
@@ -125,7 +125,7 @@ function to_minute(inputstr)
          end
       else -- day indicated
          d = d * 24 * 60 --converted to minutes
-         h = string.match(t, "^(%d*)$")
+         h = string.match(t, "^(%d+)$")
          if h ~= nil then -- hours indicated
             return d + h * 60
          else

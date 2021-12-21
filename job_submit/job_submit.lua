@@ -102,45 +102,47 @@ function to_minute(inputstr)
    local d,h,m,s
    local t
 
-   if inputstr ~= nil then
-      -- Test if a day is indicated (string separated by "-"
-      d, t = string.match(inputstr, "^(%d+)-(.*)$")
+   if inputstr == nil then
+      return 0
+   end
+   -- Test if a day is indicated (string separated by "-"
+   d, t = string.match(inputstr, "^(%d+)-(.+)$")
 
-      if d == nil then -- no day indicated
-         m = string.match(inputstr, "^(%d+)$")
-         if m ~= nil then  -- minutes indicated
-            return m
+   if d == nil then -- no day indicated
+      m = string.match(inputstr, "^(%d+)$")
+      if m ~= nil then  -- minutes indicated
+         return m
+      else
+         m, s = string.match(inputstr, "^(%d+):(%d+)$")
+         if m ~= nil and s ~= nil then -- minutes:seconds indicated
+            -- seconds ceiled to one minute if greater than 1
+            return m + math.ceil(s/60)
          else
-            m, s = string.match(inputstr, "^(%d+):(%d+)$")
-            if m ~= nil and s ~= nil then -- minutes:seconds indicated
-               -- seconds ceiled to one minute if greater than 1
-               return m + math.ceil(s/60)
-            else
-               h, m, s = string.match(inputstr, "^(%d+):(%d+):(%d+)$")
-               if h ~= nil and m ~= nil and s ~= nil then -- hours:minutes:seconds indicated
-                  -- second ceiled to one minute if greater than 1
-                  return h * 60 + m + math.ceil(s/60)
-               end
+            h, m, s = string.match(inputstr, "^(%d+):(%d+):(%d+)$")
+            if h ~= nil and m ~= nil and s ~= nil then -- hours:minutes:seconds indicated
+               -- second ceiled to one minute if greater than 1
+               return h * 60 + m + math.ceil(s/60)
             end
          end
-      else -- day indicated
-         d = d * 24 * 60 --converted to minutes
-         h = string.match(t, "^(%d+)$")
-         if h ~= nil then -- hours indicated
-            return d + h * 60
+      end
+   else -- day indicated
+      d = d * 24 * 60 --converted to minutes
+      h = string.match(t, "^(%d+)$")
+      if h ~= nil then -- hours indicated
+         return d + h * 60
+      else
+         h, m = string.match(t, "^(%d+):(%d+)$") -- hours:minutes indicated
+         if h ~= nil and m ~= nil then
+            return d + h * 60 + m
          else
-            h, m = string.match(t, "^(%d+):(%d+)$") -- hours:minutes indicated
-            if h ~= nil and m ~= nil then
-               return d + h * 60 + m
-            else
-               h, m, s = string.match(t, "^(%d+):(%d+):(%d+)$") -- hours:minutes:seconds indicated
-               if h ~= nil and m ~= nil and s ~= nil then
-                  return d + h * 60 + m + math.ceil(s/60)
-               end
+            h, m, s = string.match(t, "^(%d+):(%d+):(%d+)$") -- hours:minutes:seconds indicated
+            if h ~= nil and m ~= nil and s ~= nil then
+               return d + h * 60 + m + math.ceil(s/60)
             end
          end
       end
    end
+   return 0
 end
 
 --========================================================================--

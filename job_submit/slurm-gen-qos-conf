@@ -98,33 +98,33 @@ qos_reader = read_csv_cmd(SACCT_CMD, SACCT_FIELDNAMES)
 qos_conf = []
 
 for qos_row in qos_reader:
-
-    qos_conf_l = None
     if len(qos_row) < 2:
         print('not enough columns in row: %d' % (len(qos_conf)))
-    else:
+        continue
 
-        name = qos_row['name']
-        wall = qos_row['walltime']
-        cpu = qos_row['max_cpus']
+    qos_conf_l = None
 
-        if name == '' or (wall == '' and cpu == ''):
-            print('skipping qos %s since MaxWall and MaxCPUs are missing' \
-                  % (name))
-            continue
-        if name in EXCLUDED_QOS:
-            print('skipping qos %s because listed as excluded' \
-                  % (name))
-            continue
+    name = qos_row['name']
+    wall = qos_row['walltime']
+    cpu = qos_row['max_cpus']
 
-        accounts = ''
-        if name in qos_accounts:
-            accounts = ','.join(qos_accounts[name])
-        qos_conf_l = "{name}|{wall}|{cpu}|{accounts}\n" \
-                           .format(name=name,
-                                   wall=wall,
-                                   cpu=cpu,
-                                   accounts=accounts)
+    if name == '' or (wall == '' and cpu == ''):
+        print('skipping qos %s since MaxWall and MaxCPUs are missing' \
+              % (name))
+        continue
+    if name in EXCLUDED_QOS:
+        print('skipping qos %s because listed as excluded' \
+              % (name))
+        continue
+
+    accounts = ''
+    if name in qos_accounts:
+        accounts = ','.join(qos_accounts[name])
+    qos_conf_l = "{name}|{wall}|{cpu}|{accounts}\n" \
+                       .format(name=name,
+                               wall=wall,
+                               cpu=cpu,
+                               accounts=accounts)
 
     if qos_conf_l:
         qos_conf.append(qos_conf_l)

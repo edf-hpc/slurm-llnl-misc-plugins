@@ -42,7 +42,6 @@
 import subprocess
 import sys
 import csv
-import os
 
 # list of QOS to ignore for file
 EXCLUDED_QOS = ['dsp-ap-hpcstats']

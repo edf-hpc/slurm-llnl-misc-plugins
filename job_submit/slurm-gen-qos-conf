@@ -53,8 +53,8 @@ def read_csv_cmd(cmd, fieldnames):
     output = None
     try:
         output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0].decode('utf-8')
-    except subprocess.CalledProcessError as e:
-        print("error while executing cmd: %s: %s" % (','.join(cmd), str(e)))
+    except subprocess.CalledProcessError as exc:
+        print("error while executing cmd: %s: %s" % (','.join(cmd), str(exc)))
         sys.exit(1)
 
     output_lines = output.split('\n')

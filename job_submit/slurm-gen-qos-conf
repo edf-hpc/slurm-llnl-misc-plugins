@@ -47,6 +47,8 @@ import csv
 EXCLUDED_QOS = ['dsp-ap-hpcstats']
 # list of accounts to ignore
 EXCLUDED_ACCOUNTS = ['root']
+# list of partitions we want QoS for
+VALID_PARTITIONS = ['an', 'bm', 'cn', 'gn', 'hm', 'tm', 'vn']
 
 def read_csv_cmd(cmd, fieldnames):
     """ Execute a cmd and extract fieldnames separated by a '|' delimiter"""
@@ -114,6 +116,11 @@ for qos_row in qos_reader:
         continue
     if name in EXCLUDED_QOS:
         print('skipping qos %s because listed as excluded' \
+              % (name))
+        continue
+    partition = name.split('_')[0]
+    if partition not in VALID_PARTITIONS:
+        print('skipping qos %s because it does not apply to a valid partition' \
               % (name))
         continue
 

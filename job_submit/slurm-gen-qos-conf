@@ -128,7 +128,7 @@ for qos_row in qos_reader:
 
     if qos_conf_l: qos_conf.append(qos_conf_l)
 
-if len(qos_conf):
+if qos_conf:
     with open(QOS_CONF, 'w') as qosfile:
         qosfile.writelines(sorted(qos_conf, reverse=True))
 else:

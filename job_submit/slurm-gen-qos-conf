@@ -45,9 +45,9 @@ import csv
 import os
 
 # list of QOS to ignore for file
-excluded_qos = [ 'dsp-ap-hpcstats' ]
+excluded_qos = ['dsp-ap-hpcstats']
 # list of accounts to ignore
-excluded_accounts = [ 'root' ]
+excluded_accounts = ['root']
 
 def read_csv_cmd(cmd, fieldnames):
     output = None
@@ -65,7 +65,7 @@ def read_csv_cmd(cmd, fieldnames):
 def get_qos_accounts():
     """For a dict with all QOS except 'normal' as keys and the list of allowed
        accounts as values."""
-    cmd = [ 'sacctmgr', '--noheader', '--parsable', 'show', 'associations', 'format="account,qos"' ]
+    cmd = ['sacctmgr', '--noheader', '--parsable', 'show', 'associations', 'format="account,qos"']
 
     fieldnames = ['account', 'qos']
     reader = read_csv_cmd(cmd, fieldnames)
@@ -79,7 +79,7 @@ def get_qos_accounts():
         qos_list = row['qos'].split(',')
         for qos in qos_list:
             if qos not in result:
-                result[qos] = [ account ]
+                result[qos] = [account]
             elif account not in result[qos]:
                 result[qos].append(account)
 
@@ -90,7 +90,7 @@ QOS_CONF = "/etc/slurm/qos.conf"
 qos_accounts = get_qos_accounts()
 
 # run sacctmgr to get the list of qos
-cmd = [ 'sacctmgr', '--noheader', '--parsable', 'show', 'qos', 'format="Name,MaxWall,MaxCPUs"' ]
+cmd = ['sacctmgr', '--noheader', '--parsable', 'show', 'qos', 'format="Name,MaxWall,MaxCPUs"']
 fieldnames = ['name', 'walltime', 'max_cpus']
 qos_reader = read_csv_cmd(cmd, fieldnames)
 

@@ -49,6 +49,7 @@ EXCLUDED_QOS = ['dsp-ap-hpcstats']
 EXCLUDED_ACCOUNTS = ['root']
 
 def read_csv_cmd(cmd, fieldnames):
+    """ Execute a cmd and extract fieldnames separated by a '|' delimiter"""
     output = None
     try:
         output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0].decode('utf-8')

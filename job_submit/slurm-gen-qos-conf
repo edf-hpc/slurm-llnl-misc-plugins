@@ -126,7 +126,8 @@ for qos_row in qos_reader:
                                    cpu=cpu,
                                    accounts=accounts)
 
-    if qos_conf_l: qos_conf.append(qos_conf_l)
+    if qos_conf_l:
+        qos_conf.append(qos_conf_l)
 
 if qos_conf:
     with open(QOS_CONF, 'w') as qosfile:

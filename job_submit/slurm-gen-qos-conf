@@ -120,11 +120,7 @@ for qos_row in qos_reader:
     accounts = ''
     if name in qos_accounts:
         accounts = ','.join(qos_accounts[name])
-    qos_conf_l = "{name}|{wall}|{cpu}|{accounts}\n" \
-                       .format(name=name,
-                               wall=wall,
-                               cpu=cpu,
-                               accounts=accounts)
+    qos_conf_l = '|'.join([name, wall, cpu, accounts]) + '\n'
 
     if qos_conf_l:
         qos_conf.append(qos_conf_l)

@@ -90,9 +90,9 @@ QOS_CONF = "/etc/slurm/qos.conf"
 qos_accounts = get_qos_accounts()
 
 # run sacctmgr to get the list of qos
-cmd = ['sacctmgr', '--noheader', '--parsable', 'show', 'qos', 'format="Name,MaxWall,MaxCPUs"']
-fieldnames = ['name', 'walltime', 'max_cpus']
-qos_reader = read_csv_cmd(cmd, fieldnames)
+SACCT_CMD = ['sacctmgr', '--noheader', '--parsable', 'show', 'qos', 'format="Name,MaxWall,MaxCPUs"']
+SACCT_FIELDNAMES = ['name', 'walltime', 'max_cpus']
+qos_reader = read_csv_cmd(SACCT_CMD, SACCT_FIELDNAMES)
 
 # list of all lines to write in conf file
 qos_conf = []

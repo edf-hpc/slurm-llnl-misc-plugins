@@ -45,9 +45,9 @@ import csv
 import os
 
 # list of QOS to ignore for file
-excluded_qos = ['dsp-ap-hpcstats']
+EXCLUDED_QOS = ['dsp-ap-hpcstats']
 # list of accounts to ignore
-excluded_accounts = ['root']
+EXCLUDED_ACCOUNTS = ['root']
 
 def read_csv_cmd(cmd, fieldnames):
     output = None
@@ -74,7 +74,7 @@ def get_qos_accounts():
 
     for row in reader:
         account = row['account']
-        if account in excluded_accounts:
+        if account in EXCLUDED_ACCOUNTS:
             continue  # jump to next line
         qos_list = row['qos'].split(',')
         for qos in qos_list:
@@ -112,7 +112,7 @@ for qos_row in qos_reader:
             print('skipping qos %s since MaxWall and MaxCPUs are missing' \
                   % (name))
             continue
-        if name in excluded_qos:
+        if name in EXCLUDED_QOS:
             print('skipping qos %s because listed as excluded' \
                   % (name))
             continue

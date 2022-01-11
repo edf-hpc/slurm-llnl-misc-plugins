@@ -304,6 +304,7 @@ CORES_PER_NODE = 4
 ENFORCE_ACCOUNT = false      -- check qos/account compatibility, default to no
 JOB_NAME_REGEX  = "^[a-zA-Z0-9-_]+$"
 JOB_NAME_MAXLEN = 40
+IGNORED_QOS      = {'test', 'dsp-ap-hpcstats'}
 
 -- cf. slurm/slurm_errno.h
 WCKEY_CONF_FILE = CONF_DIR .. "/wckeysctl/wckeys"
@@ -361,7 +362,9 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
 
       if job_desc.partition == nil then
          job_desc.partition = partition
-      elseif job_desc.partition ~= partition then
+      -- if we have a partition for the job, checks it matches the QoS
+      -- unless it's a QoS we ignore
+      elseif IGNORED_QOS[job_desc.qos] == nil and job_desc.partition ~= partition then
          log_error("slurm_job_submit: partition %s specified by user doesn't match QOS %s",
             job_desc.partition, job_desc.qos)
          return slurm.ESLURM_INVALID_PARTITION_NAME

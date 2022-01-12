@@ -409,7 +409,7 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
                break
             end
          end
-         if job_desc.partition ~= nil then
+         if job_desc.partition == nil then
             log_error("slurm_job_submit: couldn't find a default partition")
             return slurm.ESLURM_DEFAULT_PARTITION_NOT_SET
          end

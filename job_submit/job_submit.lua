@@ -35,12 +35,13 @@
 
 --========================================================================--
 
-function extendTable(t1, t2)
-   -- Extend table t1 with values of t2
-   for k,v in ipairs(t2) do
-      table.insert(t1, v)
+function sorted_keys(dict)
+   keys = {}
+   for k in pairs(dict) do
+      table.insert(keys, k)
    end
-   return t1
+   table.sort(keys)
+   return keys
 end
 
 --========================================================================--
@@ -400,7 +401,7 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
       end
 
       if job_desc.partition ~= nil then
-         slurm.log_info("slurm_job_submit: partition %s specified by user.", job_desc.partition)
+         slurm.log_info("slurm_job_submit: partition '%s' specified by user.", job_desc.partition)
       else
          -- If the user did not set the partition, set the default
          -- partition in slurm configuration
@@ -439,58 +440,57 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
 
       -- Find the first QOS in qos_list that matches jobs cpus and
       -- and time limit
-      if qos_list ~= nil then
-         for i, part in pairs (qos_list) do
-            -- Restrict to QOS compatible with the partition only
-            if job_desc.partition == nil or job_desc.partition == part then
+      for _, maxcpus in ipairs(sorted_keys(qos_list[job_desc.partition])) do
+        maxcpu_part = qos_list[job_desc.partition][maxcpus]
+        if maxcpu_part == nil then
+          goto continue_maxcpus
+        end
 
-               if qos_list[part] ~= nil then
-                  for j, maxcpus in ipairs(qos_list[part]) do
-                     if considered_min_cpus <= tonumber(maxcpus) and (job_desc.max_nodes == NULL or job_desc.max_nodes <= tonumber(maxcpus) / CORES_PER_NODE) then
+        if considered_min_cpus > maxcpus then
+          goto continue_maxcpus
+        end
+        if job_desc.max_nodes ~= NULL and job_desc.max_nodes > maxcpus / CORES_PER_NODE then
+          goto continue_maxcpus
+        end
 
-                        if qos_list[part][maxcpus] ~= nil then
-                           for k, qos_maxtime in ipairs(qos_list[part][maxcpus]) do
-                              if job_desc.time_limit <= tonumber(qos_maxtime) then
+        for _, maxduration in ipairs(sorted_keys(maxcpu_part)) do
+          maxduration_part = maxcpu_part[maxduration]
+          if job_desc.time_limit > maxduration then
+            goto continue_maxduration
+          end
 
-                                 for l, qos_name in ipairs(qos_list[part][maxcpus][qos_maxtime]) do
-                                     -- check the job account is allowed in qos accounts if ENFORCE_ACCOUNT is true
-                                     if not ENFORCE_ACCOUNT or has_value(qos_accounts[qos_name], job_desc.account) then
-                                        found_qos_name = qos_name
-                                        -- break loop on qos_names
-                                        break
-                                     end
-                                 end
-                                 if found_qos_name ~= nil then
-                                    -- break loop on qos_maxtime
-                                    break
-                                 end
-                              end
-                           end
-
-                           if found_qos_name ~= nil then
-                              -- break loop on maxcpus
-                              break
-                           end
-                        end
-                     end
-                  end
-               end
+          for qos_name, accounts in pairs(maxduration_part) do
+            -- check the job account is allowed in qos accounts if ENFORCE_ACCOUNT is true
+            if not ENFORCE_ACCOUNT or has_value(accounts, job_desc.account) then
+              found_qos_name = qos_name
+              break
             end
-         end
-      end
+          end
+          if found_qos_name ~= nil then
+            break
+          end
+          ::continue_maxduration::
+        end
+        if found_qos_name ~= nil then
+           break
+        end
+        ::continue_maxcpus::
+     end
 
-      if found_qos_name ~= nil then
-         slurm.log_info("slurm_job_submit: finally setting qos %s", found_qos_name)
-         job_desc.qos = found_qos_name
-      end
-
+     if found_qos_name ~= nil then
+        slurm.log_info("slurm_job_submit: finally setting qos %s", found_qos_name)
+        job_desc.qos = found_qos_name
+     else
+        log_error("slurm_job_submit: couldn't find a QoS match")
+        return slurm.ERROR
+     end
    end
 
    -- check time limit
-   if qos[job_desc.qos] ~= nil and qos[job_desc.qos][duration] ~= nil and
-         job_desc.time_limit ~= nil and job_desc.time_limit > qos[job_desc.qos][duration] then
-      log_error("slurm_job_submit: job time limit (%u) is larger than QOS %s limit (%u)",
-         job_desc.time_limit, found_qos_name, qos[job_desc.qos][duration])
+   if qos[job_desc.qos] ~= nil and qos[job_desc.qos]['duration'] ~= nil and
+         job_desc.time_limit ~= nil and job_desc.time_limit > qos[job_desc.qos]['duration'] then
+      log_error("slurm_job_submit: job time limit (%u) is larger than QoS '%s' limit (%u)",
+         job_desc.time_limit, job_desc.qos, qos[job_desc.qos]['duration'])
       return slurm.ESLURM_INVALID_TIME_LIMIT
    end
 

@@ -436,6 +436,11 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
           end
       end
 
+      if qos_list[job_desc.partition] == nil then
+         log_error("slurm_job_submit: no QoS exists for partition '%s'", job_desc.partition)
+         return slurm.ERROR
+      end
+
       found_qos_name = nil
 
       -- Find the first QOS in qos_list that matches jobs cpus and

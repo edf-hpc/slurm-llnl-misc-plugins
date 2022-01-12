@@ -302,7 +302,7 @@ def create_user(name, account):
     """
     logger.info("creating user %s with account %s", name, account)
     cmd = ['sacctmgr', '-i', 'add', 'user', name,
-           f'DefaultAccount={account}']
+           'DefaultAccount=%s' % account]
     if conf.user_add_opts is not None:
         cmd.extend(conf.user_add_opts)
     run_or_die(cmd)
@@ -321,7 +321,7 @@ def remove_user_account(name, account):
     """
     logger.info("deleting user %s with account %s", name, account)
     cmd = ['sacctmgr', '-i', 'delete', 'user', name, 'where',
-           f'account={account}']
+           'account=%s' % account]
     run_or_die(cmd)
 
 def get_slurm_users():
@@ -416,7 +416,7 @@ def main():
 
             # create user and eventually account
             if conf.policy == 'user_account':
-                create_acct(user.name, f'user {name} default account')
+                create_acct(user.name, 'user %s default account' % name)
                 acct = name
             elif conf.policy in ['global_account', 'multiple_accounts']:
                 acct = find_group_account(user.group)

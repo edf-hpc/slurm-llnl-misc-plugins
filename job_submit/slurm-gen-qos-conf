@@ -42,19 +42,21 @@
 import subprocess
 import sys
 import csv
-import os
 
 # list of QOS to ignore for file
-excluded_qos = [ 'dsp-ap-hpcstats' ]
+EXCLUDED_QOS = ['dsp-ap-hpcstats']
 # list of accounts to ignore
-excluded_accounts = [ 'root' ]
+EXCLUDED_ACCOUNTS = ['root']
+# list of partitions we want QoS for
+VALID_PARTITIONS = ['an', 'bm', 'cn', 'gn', 'hm', 'tm', 'vn']
 
 def read_csv_cmd(cmd, fieldnames):
+    """ Execute a cmd and extract fieldnames separated by a '|' delimiter"""
     output = None
     try:
         output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0].decode('utf-8')
-    except subprocess.CalledProcessError as e:
-        print("error while executing cmd: %s: %s" % (','.join(cmd), str(e)))
+    except subprocess.CalledProcessError as exc:
+        print("error while executing cmd: %s: %s" % (','.join(cmd), str(exc)))
         sys.exit(1)
 
     output_lines = output.split('\n')
@@ -65,7 +67,7 @@ def read_csv_cmd(cmd, fieldnames):
 def get_qos_accounts():
     """For a dict with all QOS except 'normal' as keys and the list of allowed
        accounts as values."""
-    cmd = [ 'sacctmgr', '--noheader', '--parsable', 'show', 'associations', 'format="account,qos"' ]
+    cmd = ['sacctmgr', '--noheader', '--parsable', 'show', 'associations', 'format="account,qos"']
 
     fieldnames = ['account', 'qos']
     reader = read_csv_cmd(cmd, fieldnames)
@@ -74,12 +76,12 @@ def get_qos_accounts():
 
     for row in reader:
         account = row['account']
-        if account in excluded_accounts:
+        if account in EXCLUDED_ACCOUNTS:
             continue  # jump to next line
         qos_list = row['qos'].split(',')
         for qos in qos_list:
             if qos not in result:
-                result[qos] = [ account ]
+                result[qos] = [account]
             elif account not in result[qos]:
                 result[qos].append(account)
 
@@ -90,45 +92,47 @@ QOS_CONF = "/etc/slurm/qos.conf"
 qos_accounts = get_qos_accounts()
 
 # run sacctmgr to get the list of qos
-cmd = [ 'sacctmgr', '--noheader', '--parsable', 'show', 'qos', 'format="Name,MaxWall,MaxCPUs"' ]
-fieldnames = ['name', 'walltime', 'max_cpus']
-qos_reader = read_csv_cmd(cmd, fieldnames)
+SACCT_CMD = ['sacctmgr', '--noheader', '--parsable', 'show', 'qos', 'format="Name,MaxWall,MaxCPUs"']
+SACCT_FIELDNAMES = ['name', 'walltime', 'max_cpus']
+qos_reader = read_csv_cmd(SACCT_CMD, SACCT_FIELDNAMES)
 
 # list of all lines to write in conf file
 qos_conf = []
 
 for qos_row in qos_reader:
-
-    qos_conf_l = None
     if len(qos_row) < 2:
         print('not enough columns in row: %d' % (len(qos_conf)))
-    else:
+        continue
 
-        name = qos_row['name']
-        wall = qos_row['walltime']
-        cpu = qos_row['max_cpus']
+    qos_conf_l = None
 
-        if name == '' or (wall == '' and cpu == ''):
-            print('skipping qos %s since MaxWall and MaxCPUs are missing' \
-                  % (name))
-            continue
-        if name in excluded_qos:
-            print('skipping qos %s because listed as excluded' \
-                  % (name))
-            continue
+    name = qos_row['name']
+    wall = qos_row['walltime']
+    cpu = qos_row['max_cpus']
 
-        accounts = ''
-        if name in qos_accounts:
-            accounts = ','.join(qos_accounts[name])
-        qos_conf_l = "{name}|{wall}|{cpu}|{accounts}\n" \
-                           .format(name=name,
-                                   wall=wall,
-                                   cpu=cpu,
-                                   accounts=accounts)
+    if name == '' or (wall == '' and cpu == ''):
+        print('skipping qos %s since MaxWall and MaxCPUs are missing' \
+              % (name))
+        continue
+    if name in EXCLUDED_QOS:
+        print('skipping qos %s because listed as excluded' \
+              % (name))
+        continue
+    partition = name.split('_')[0]
+    if partition not in VALID_PARTITIONS:
+        print('skipping qos %s because it does not apply to a valid partition' \
+              % (name))
+        continue
 
-    if qos_conf_l: qos_conf.append(qos_conf_l)
+    accounts = ''
+    if name in qos_accounts:
+        accounts = ','.join(qos_accounts[name])
+    qos_conf_l = '|'.join([name, wall, cpu, accounts]) + '\n'
 
-if len(qos_conf):
+    if qos_conf_l:
+        qos_conf.append(qos_conf_l)
+
+if qos_conf:
     with open(QOS_CONF, 'w') as qosfile:
         qosfile.writelines(sorted(qos_conf, reverse=True))
 else:

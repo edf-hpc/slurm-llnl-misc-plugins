@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+"""
+This script synchronizes users from unix to slurm
+"""
 # -*- coding: utf-8 -*-
 ##############################################################################
 # Copyright (C) 2015-2020 EDF SA                                             #
@@ -57,10 +60,12 @@ DEFAULT_CONF_FILE = '/etc/slurm/sync-accounts.conf'
 # This list specifies list of users that should normally be present in SlurmDBD
 # but not necessarily in users groups, and therefore should not be removed from
 # SlurmDBD.
-IGNORED_SLURM_USERS = [ 'root' ]
+IGNORED_SLURM_USERS = ['root']
 
-class User(object):
-
+class User():
+    """
+    User object definition
+    """
     def __init__(self, name, group):
 
         self.name = name
@@ -74,17 +79,20 @@ class User(object):
 
         return hash(self.name)
 
-class Account(object):
-
+class Account():
+    """
+    Account object definition
+    """
     def __init__(self, name, desc, groups):
 
         self.name = name
         self.desc = desc
         self.groups = groups  # the posix groups associated to this account
 
-class Conf(object):
-    """Runtime configuration class"""
-
+class Conf():
+    """
+    Runtime configuration class
+    """
     def __init__(self, filename=DEFAULT_CONF_FILE):
         self.filename = filename
         self.org = None
@@ -100,8 +108,9 @@ class Conf(object):
         self.accounts = []
 
     def parse(self):
-        """Parse the configuration file"""
-
+        """
+        Parse the configuration file
+        """
         if not os.path.isfile(self.filename):
             die("failed to parse config file {filename}" \
                 .format(filename=self.filename))
@@ -114,22 +123,22 @@ class Conf(object):
 
         self.policy = parser.get('main', 'policy')
 
-        available_policies = [ 'global_account',
-                               'multiple_accounts',
-                               'user_account' ]
+        available_policies = ['global_account',
+                              'multiple_accounts',
+                              'user_account']
 
         if not self.policy in available_policies:
             die("invalid policy {policy}" \
                 .format(policy=self.policy))
 
-        if self.policy in [ 'global_account', 'user_account']:
+        if self.policy in ['global_account', 'user_account']:
 
             # check deprecated group parameter
-            if not parser.has_option('main', 'groups') and \
-               parser.has_option('main','group'):
+            if (not parser.has_option('main', 'groups') and
+                    parser.has_option('main', 'group')):
                 logger.error('main/group parameter is deprecated, '
                              'use main/groups instead')
-                self.groups = [ parser.get('main', 'group') ]
+                self.groups = [parser.get('main', 'group')]
             else:
                 self.groups = parser.get('main', 'groups').split(',')
 
@@ -143,17 +152,16 @@ class Conf(object):
         if self.policy == 'multiple_accounts':
             # parse all account/* sections
             prefix = 'account/'
-            all_sections = parser.sections()
             for section in parser.sections():
                 if section.startswith(prefix):
                     acct_name = section[len(prefix):]
                     desc = parser.get(section, 'desc')
                     # check deprecated group parameter
                     if not parser.has_option(section, 'groups') and \
-                       parser.has_option(section,'group'):
+                       parser.has_option(section, 'group'):
                         logger.error("%s/group parameter is deprecated, "
                                      "use %s/groups instead", section, section)
-                        groups = [ parser.get(section, 'group') ]
+                        groups = [parser.get(section, 'group')]
                     else:
                         groups = parser.get(section, 'groups').split(',')
 
@@ -182,13 +190,17 @@ class Conf(object):
             pass
 
 def die(msg):
-
+    """
+    Logs a critical error message and dies
+    """
     logger.critical(msg)
     sys.exit(1)
 
 def run_or_die(cmd):
-
-    logger.debug("run: {cmd}".format(cmd=' '.join(cmd)))
+    """
+    Run a command. If it returns an error and we're not in dry mode, die
+    """
+    logger.debug("run: %s", ' '.join(cmd))
     if args.dry_run is False:
         returncode = subprocess.call(cmd)
         if returncode:
@@ -196,13 +208,19 @@ def run_or_die(cmd):
                 .format(cmd=' '.join(cmd), error=str(returncode)))
 
 def get_posix_group_users(group):
-
+    """
+    Given a group, returns users beins members of this group as a list of
+    User()s
+    """
     logger.debug("searching for users in group %s", group)
     entry = grp.getgrnam(group)
-    return [ User(user.lower(), group) for user in entry[3] ]
+    return [User(user.lower(), group) for user in entry[3]]
 
 def get_posix_groups_users(groups):
-
+    """
+    Given a list of groups, returns users being members of these groups as a
+    list of User()s
+    """
     users = []
 
     for group in groups:
@@ -211,94 +229,149 @@ def get_posix_groups_users(groups):
     return list(set(users))  # remove duplicates
 
 def get_posix_users():
-    """Return a list of Users members of the posix groups set in
-       configuration."""
-
-    if len(conf.groups):
-        return get_posix_groups_users(conf.groups)
+    """
+    Return a dict of users who are members of the posix groups set in
+    configuration.
+    """
+    res = {}
+    if conf.groups:
+        for user in get_posix_groups_users(conf.groups):
+            if user.name not in res:
+                res[user.name] = []
+            res[user.name].append(user)
+        return res
 
     # merge users of all groups found in conf.accounts
-    users = []
     for account in conf.accounts:
-        xusers = get_posix_groups_users(account.groups)
-        users.extend([ xuser for xuser in xusers if xuser not in users ])
-    return users
+        for user in get_posix_groups_users(account.groups):
+            if user.name not in res:
+                res[user.name] = []
+            res[user.name].append(user)
+    return res
 
 def find_group_account(group):
-    """Return the account name corresponding to the group in parameter."""
+    """
+    Return the account name corresponding to the group in parameter.
+    """
     for account in conf.accounts:
         if group in account.groups:
             return account.name
     raise IndexError("no account found for group %s" % (group))
 
 def check_acct(name):
-
-    cmd = [ 'sacctmgr', '-n', 'show', 'Account', name ]
-    logger.debug("run: {cmd}".format(cmd=' '.join(cmd)))
+    """
+    Check if an account exists in slurm
+    Returns True if it does
+    """
+    cmd = ['sacctmgr', '-n', 'show', 'Account', name]
+    logger.debug("run: %s", ' '.join(cmd))
     output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
     return len(output) > 0
 
 def create_acct(name, desc):
-
-    logger.info("creating account {acct}".format(acct=name))
+    """
+    Create slurm account
+    """
+    logger.info("creating account %s", name)
     cmd = ['sacctmgr', '-i', 'add', 'account', name,
            "Cluster='{cluster}'".format(cluster=conf.cluster),
            "Description='{desc}'".format(desc=desc),
-           "Organization='{org}'".format(org=conf.org) ]
+           "Organization='{org}'".format(org=conf.org)]
     if conf.acct_add_opts is not None:
         cmd.extend(conf.acct_add_opts)
     run_or_die(cmd)
 
 def ensure_acct(name, desc):
-
+    """
+    Create slurm account if it doesn't already exist
+    """
     if check_acct(name) is False:
         create_acct(name, desc)
 
 def remove_acct(name):
-
-    logger.info("deleting account {acct}".format(acct=name))
-    cmd = [ 'sacctmgr', '-i', 'delete', 'account', name ]
+    """
+    Remove slurm account
+    """
+    logger.info("deleting account %s", name)
+    cmd = ['sacctmgr', '-i', 'delete', 'account', name]
     run_or_die(cmd)
 
 def create_user(name, account):
-
-    logger.info("creating user {user}".format(user=name))
-    cmd = [ 'sacctmgr', '-i', 'add', 'user', name,
-            "DefaultAccount={acct}".format(acct=account) ]
+    """
+    Create slurm user
+    """
+    logger.info("creating user %s with account %s", name, account)
+    cmd = ['sacctmgr', '-i', 'add', 'user', name,
+           'DefaultAccount=%s' % account]
     if conf.user_add_opts is not None:
         cmd.extend(conf.user_add_opts)
     run_or_die(cmd)
 
 def remove_user(name):
+    """
+    Remove slurm user
+    """
+    logger.info("deleting user %s", name)
+    cmd = ['sacctmgr', '-i', 'delete', 'user', name]
+    run_or_die(cmd)
 
-    logger.info("deleting user {user}".format(user=name))
-    cmd = [ 'sacctmgr', '-i', 'delete', 'user', name ]
+def remove_user_account(name, account):
+    """
+    Remove slurm user using a specific account
+    """
+    logger.info("deleting user %s with account %s", name, account)
+    cmd = ['sacctmgr', '-i', 'delete', 'user', name, 'where',
+           'account=%s' % account]
     run_or_die(cmd)
 
 def get_slurm_users():
-
-    users = []
-    cmd = [ 'sacctmgr', 'show', 'user', '--parsable', '--noheader' ]
-    logger.debug("run: {cmd}".format(cmd=' '.join(cmd)))
+    """
+    Returns a dict for users existing in slurm
+    """
+    users = {}
+    associations = {}
+    cmd = ['sacctmgr', 'show', 'association', '--parsable', '--noheader']
+    logger.debug("run: %s", ' '.join(cmd))
     output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0].decode('utf-8')
     reader = csv.reader(output.strip().split('\n'), delimiter='|')
+
+    for row in reader:
+        account = row[1]
+        user = row[2]
+        if not user or not account:
+            continue
+        if user not in associations:
+            associations[user] = []
+        associations[user].append(account)
+
+    cmd = ['sacctmgr', 'show', 'user', '--parsable', '--noheader']
+    logger.debug("run: %s", ' '.join(cmd))
+    output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0].decode('utf-8')
+    reader = csv.reader(output.strip().split('\n'), delimiter='|')
+
     for row in reader:
         user = row[0]
-        if user not in IGNORED_SLURM_USERS:
-            users.append(user)
+        if user in IGNORED_SLURM_USERS:
+            continue
+        users[user] = list(associations[user])
 
     return users
 
 def parse_args():
-
+    """
+    Parse command line arguments
+    """
     global args
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dry-run", help="Do nothing, just print what it would do.", action="store_true")
+    parser.add_argument("--dry-run", help="Do nothing, just print what it would do.",
+                        action="store_true")
     parser.add_argument("--debug", help="Debug mode.", action="store_true")
     args = parser.parse_args()
 
 def init_logger():
-
+    """
+    Init the logger
+    """
     global logger
     logger = logging.getLogger(__file__)
     if args.debug is True:
@@ -317,7 +390,9 @@ def init_logger():
     logger.addHandler(handler)
 
 def main():
-
+    """
+    The real main
+    """
     global conf
 
     parse_args()
@@ -333,24 +408,56 @@ def main():
     users_posix = get_posix_users()
     users_slurm = get_slurm_users()
 
-    for user in users_posix:
-        if user.name not in users_slurm:
+    slurm_user_names = users_slurm.keys()
+    for name, users in users_posix.items():
+        for user in users:
+            if name in slurm_user_names:
+                continue
+
             # create user and eventually account
             if conf.policy == 'user_account':
-                acct_desc = "user {user} default account".format(user=user.name)
-                create_acct(user.name, acct_desc)
-                create_user(user.name, user.name)
+                create_acct(user.name, 'user %s default account' % name)
+                acct = name
             elif conf.policy in ['global_account', 'multiple_accounts']:
                 acct = find_group_account(user.group)
-                create_user(user.name, acct)
+            create_user(name, acct)
 
-    for user in users_slurm:
-        posix_user_names = [ xuser.name for xuser in users_posix ]
-        if user not in posix_user_names:
-            # delete user and eventually account
-            remove_user(user)
+    posix_user_names = users_posix.keys()
+    for name, accounts in users_slurm.items():
+        # While a user might have multiple associations (as in different accounts),
+        # if it doesn't exist in Unix, we can delete it in one go
+        if name not in posix_user_names:
+            remove_user(name)
             if conf.policy == 'user_account':
-                remove_acct(user)
+                remove_acct(name)
+            continue
+
+        # The slurm user exists in unix, check if its accounts are correct
+        if conf.policy == 'user_account':
+            found_accounts = [name]
+        elif conf.policy in ['global_account', 'multiple_accounts']:
+            found_accounts = []
+            for user in users_posix[name]:
+                found_accounts.append(find_group_account(user.group))
+            found_accounts = sorted(found_accounts)
+
+        # We can't modify a user's association, the only way is to create a new
+        # user and to delete the old one. The man page says:
+        #
+        # ===8<===8<===8<===8<===8<===8<===8<===8<===8<===8<===8<===8<===8<===
+        # association
+        # Add, modify, and delete should be done to a user, account or cluster
+        # entity.  This will in-turn update the underlying associations.
+        # ===8<===8<===8<===8<===8<===8<===8<===8<===8<===8<===8<===8<===8<===
+        for account in found_accounts:
+            if account not in accounts:
+                create_user(name, account)
+
+        # This gives us a list of extra slurm accounts the user shouldn't have
+        extra_accounts = list(set(accounts).difference(found_accounts))
+
+        for account in extra_accounts:
+            remove_user_account(name, account)
 
 if __name__ == '__main__':
 

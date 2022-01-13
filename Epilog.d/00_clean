@@ -8,14 +8,17 @@
 logger "EPILOG[INFO][$SLURM_JOB_ID]: Starting clean Epilog for job $SLURM_JOB_ID"
 
 if [ x$SLURM_UID == "x" ] ; then 
+	logger "EPILOG[ERROR][$SLURM_JOB_ID]: exiting prematurely because SLURM_UID is not defined: '${SLURM_UID}'"
 	exit 0
 fi
 if [ x$SLURM_JOB_ID == "x" ] ; then 
-        exit 0
+	logger "EPILOG[ERROR][$SLURM_JOB_ID]: exiting prematurely because SLURM_JOB_ID is not defined: '${SLURM_JOB_ID}'"
+	exit 0
 fi
 
 # Don't try to kill user root or system daemon jobs
 if [ $SLURM_UID -lt 1000 ] ; then
+	logger "EPILOG[ERROR][$SLURM_JOB_ID]: exiting prematurely because SLURM_UID is below 1000: '${SLURM_UID}'"
 	exit 0
 fi
 

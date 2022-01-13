@@ -5,6 +5,24 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## Unrelease
 
+## [1.2.8] - 2022-01-13
+### Changed
+- slurm-gen-qos-conf: some cleaning and only only keep QoS which matches partitions
+- job_submit.lua:
+  - lots of cleaning
+  - added a logging function so we can return error messages to the user
+  - job names have to match a regex
+  - job names have to under a fixed length
+  - now returns an error if we don't find a matching QoS when it's not provided
+  - now returns an error if we don't find a default partition if none was provided
+  - ensure job's time limit is compatible with the QoS' time limit
+  - fixed a bug in to_minute where d-h would be converted to d-h, ensure we actually match digits and returns 0 if we found nothing
+  - slurm only expects a limited set of return results so some of them had to be converted to slurm.ERROR (for example: ESLURM_INVALID_WCKEY and ESLURM_INVALID_QOS)
+  - when the user provided both QoS and partition, make sure they match
+  - because we rewrote a portion of the build_qos, now we can iterate the list of QoSes matching a given partition to find one matching the time limit, number of nodes and accounts if needed
+  - if a QoS wasn't provided and we either used the default partition or the provided one, make sure we have matching QoSes, if not, returns an error
+- slurm-sync-accounts: some cleaning and added logic so the script doesn't what's necessary when a user should have multiple associations or when a user should have its current association(s) replaced
+
 ## [1.2.7] - 2021-04-28
 ### Changed
 - epilog: log meaningful error in cases epilog exits prematurely

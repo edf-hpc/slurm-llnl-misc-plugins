@@ -491,9 +491,18 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
      end
    end
 
-   -- check time limit
-   if qos[job_desc.qos] ~= nil and qos[job_desc.qos]['duration'] ~= nil and
-         job_desc.time_limit ~= nil and job_desc.time_limit > qos[job_desc.qos]['duration'] then
+   -- check time limit so we need to know this QoS
+   if qos[job_desc.qos] == nil then
+      log_error("slurm_job_submit: the QoS '%s' used is unknown",
+         job_desc.qos)
+      return slurm.ERROR
+   end
+   if qos[job_desc.qos]['duration'] == nil then
+      log_error("slurm_job_submit: the QoS '%s' used has no known time limit",
+         job_desc.qos)
+      return slurm.ESLURM_MISSING_TIME_LIMIT
+   end
+   if job_desc.time_limit ~= nil and job_desc.time_limit > qos[job_desc.qos]['duration'] then
       log_error("slurm_job_submit: job time limit (%u) is larger than QoS '%s' limit (%u)",
          job_desc.time_limit, job_desc.qos, qos[job_desc.qos]['duration'])
       return slurm.ESLURM_INVALID_TIME_LIMIT

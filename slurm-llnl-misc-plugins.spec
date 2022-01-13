@@ -1,12 +1,12 @@
 # Configuration Logic
 %define name slurm-llnl-misc-plugins
-%define version 1.2.6
+%define version 1.2.8
 %define debug_package %{nil}
 
 # Main preamble
 Summary: Miscelaneous plugins for Slurm open source scheduler
 Name: slurm-llnl-misc-plugins
-Version: 1.2.6
+Version: %{version}
 Release: 1%{?dist}.edf
 Source0: %{name}-%{version}.tar.gz
 License: GPLv3
@@ -29,8 +29,8 @@ mkdir -p %{buildroot}/etc/sysconfig
 # slurm-llnl-generic-scripts-plugin
 install -d %{buildroot}/usr/lib/slurm/generic-scripts
 install -m 755 generic-script.sh %{buildroot}/usr/lib/slurm/generic-scripts
-for step in Prolog SrunProlog TaskProlog PrologSlurmctld Epilog SrunEpilog TaskEpilog EpilogSlurmctld 
-do	   
+for step in Prolog SrunProlog TaskProlog PrologSlurmctld Epilog SrunEpilog TaskEpilog EpilogSlurmctld
+do
     install -d %{buildroot}/usr/lib/slurm/generic-scripts/${step}.d
     ln -s /usr/lib/slurm/generic-scripts/generic-script.sh %{buildroot}/usr/lib/slurm/generic-scripts/${step}.sh
 done
@@ -135,7 +135,7 @@ Summary: slurm-llnl-setup-wckeys
 Group: Application/System
 Requires: curl, dos2unix
 %description -n slurm-llnl-setup-wckeys
-This package provides a Shell script which add wckeys into Slurmdbd 
+This package provides a Shell script which add wckeys into Slurmdbd
 database. It assembles codes (one by one) from 2 files to create a
 wckey and insert it into the slurm database.
 
@@ -153,7 +153,7 @@ members with users and accounts in SlurmDBD.
 #BATCH slurmdbd-backup
 %package -n slurmdbd-backup
 Summary: Tool to backup the SlurmDBD database
-Group: Application/System 
+Group: Application/System
 Requires: mariadb
 %description -n slurmdbd-backup
 The database is dumped in a local directory with the mysqldump tool.
@@ -222,6 +222,24 @@ The database is dumped in a local directory with the mysqldump tool.
 %config /etc/slurm/slurmdbd-backup.vars
 
 %changelog
+* Thu Jan 13 2022 Mathieu Chouquet-Stringer <mathieu-externe.chouquet-stringer@edf.fr> 1.2.8-1el8.edf
+- Bump to 1.2.8
+- slurm-gen-qos-conf: some cleaning and only only keep QoS which matches partitions
+- job_submit.lua:
+  - lots of cleaning
+  - added a logging function so we can return error messages to the user
+  - job names have to match a regex
+  - job names have to under a fixed length
+  - now returns an error if we don't find a matching QoS when it's not provided
+  - now returns an error if we don't find a default partition if none was provided
+  - ensure job's time limit is compatible with the QoS' time limit
+  - fixed a bug in to_minute where d-h would be converted to d-h, ensure we actually match digits and returns 0 if we found nothing
+  - slurm only expects a limited set of return results so some of them had to be converted to slurm.ERROR (for example: ESLURM_INVALID_WCKEY and ESLURM_INVALID_QOS)
+  - when the user provided both QoS and partition, make sure they match
+  - because we rewrote a portion of the build_qos, now we can iterate the list of QoSes matching a given partition to find one matching the time limit, number of nodes and accounts if needed
+  - if a QoS wasn't provided and we either used the default partition or the provided one, make sure we have matching QoSes, if not, returns an error
+- slurm-sync-accounts: some cleaning and added logic so the script doesn't what's necessary when a user should have multiple associations or when a user should have its current association(s) replaced
+
 * Fri Feb 26 2021 Thomas Hamel <thomas-t.hamel@edf.fr> 1.2.6-1el8.edf
 - Bump to 1.2.6
 - improive kerberos prolog epilog scripts

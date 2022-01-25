@@ -358,16 +358,25 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
    -- QOS set by user. In this case, the script simply sets the partition
    -- accordingly.
    if job_desc.qos ~= nil then
-      local t = split(job_desc.qos, QOS_NAME_SEP)
+      if string.find(job_desc.qos, QOS_NAME_SEP) then
+         local t = split(job_desc.qos, QOS_NAME_SEP)
 
-      partition = t[1]
+         partition = t[1]
+      else
+         partition = nil
+      end
 
       if job_desc.partition == nil then
+         if partition == nil then
+            log_error("slurm_job_submit: QoS '%s' was specified without a partition and we cannot deduce it from the QoS",
+               job_desc.qos)
+            return slurm.ERROR
+         end
          job_desc.partition = partition
       -- if we have a partition for the job, checks it matches the QoS
-      -- unless it's a QoS we ignore
-      elseif IGNORED_QOS[job_desc.qos] == nil and job_desc.partition ~= partition then
-         log_error("slurm_job_submit: partition '%s' specified by user doesn't match QOS %s",
+      -- only if it's a QoS with QOS_NAME_SEP
+      elseif partition ~= nil and job_desc.partition ~= partition then
+         log_error("slurm_job_submit: partition '%s' specified by user doesn't match QOS '%s'",
             job_desc.partition, job_desc.qos)
          return slurm.ERROR
       end

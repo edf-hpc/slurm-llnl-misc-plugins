@@ -43,12 +43,10 @@ import subprocess
 import sys
 import csv
 
-# list of QOS to ignore for file
-EXCLUDED_QOS = ['dsp-ap-hpcstats']
 # list of accounts to ignore
 EXCLUDED_ACCOUNTS = ['root']
-# list of partitions we want QoS for
-VALID_PARTITIONS = ['an', 'bm', 'cn', 'gn', 'hm', 'tm', 'vn']
+# Separator for QoSes
+QOS_SEP = '_'
 
 def read_csv_cmd(cmd, fieldnames):
     """ Execute a cmd and extract fieldnames separated by a '|' delimiter"""
@@ -110,18 +108,16 @@ for qos_row in qos_reader:
     wall = qos_row['walltime']
     cpu = qos_row['max_cpus']
 
-    if name == '' or (wall == '' and cpu == ''):
-        print('skipping qos %s since MaxWall and MaxCPUs are missing' \
-              % (name))
+    if name = '':
+        print("Skipping QoS because it has no name (%s)" %
+              ', '.join(["%s: %s" % (k, v) for k, v in qos_row.items()))
         continue
-    if name in EXCLUDED_QOS:
-        print('skipping qos %s because listed as excluded' \
-              % (name))
+    if not wall and not cpu:
+        print("Skipping QoS '%s' since MaxWall and MaxCPUs are missing" % name)
         continue
-    partition = name.split('_')[0]
-    if partition not in VALID_PARTITIONS:
-        print('skipping qos %s because it does not apply to a valid partition' \
-              % (name))
+    if QOS_SEP not in name:
+        print("Skipping QoS '%s' because it is not separated by '%s'" %
+              (name, QOS_SEP))
         continue
 
     accounts = ''
@@ -137,4 +133,4 @@ if qos_conf:
         qosfile.writelines(sorted(qos_conf, reverse=True))
 else:
     # no valid qos line found in output of sacctmgr cmd
-    print("qos conf is empty, did not write %s" % (QOS_CONF))
+    print("QoS conf is empty, did not write %s" % (QOS_CONF))

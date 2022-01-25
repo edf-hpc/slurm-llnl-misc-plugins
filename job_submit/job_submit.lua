@@ -304,8 +304,8 @@ INFINITE       = 4294967294  -- max unsigned 32 bits integer value for slurm
 CORES_PER_NODE = 4
 ENFORCE_ACCOUNT = false      -- check qos/account compatibility, default to no
 JOB_NAME_REGEX  = "^[a-zA-Z0-9-_]+$"
+JOB_NAME_DESCRIPTION = "alphanumeric characters ('a-z', 'A-Z' and '0-9') plus '-' and '_'"
 JOB_NAME_MAXLEN = 40
-IGNORED_QOS      = {'test', 'dsp-ap-hpcstats'}
 
 -- cf. slurm/slurm_errno.h
 WCKEY_CONF_FILE = CONF_DIR .. "/wckeysctl/wckeys"
@@ -334,13 +334,13 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
    end
 
    if string.match(job_desc.name, JOB_NAME_REGEX) == nil then
-      log_error("slurm_job_submit: job name '%s' doesn't match allowed regexp ('%s')",
-         job_desc.name, JOB_NAME_REGEX)
+      log_error("slurm_job_submit: job name '%s' doesn't match the following: %s",
+         job_desc.name, JOB_NAME_DESCRIPTION)
       return slurm.ERROR
    end
 
    if string.len(job_desc.name) > JOB_NAME_MAXLEN then
-      log_error("slurm_job_submit: job name '%s' length (%d) is larger than allowed (%d)",
+      log_error("slurm_job_submit: job name '%s' length (%d) is longer than allowed (%d)",
          job_desc.name, string.len(job_desc.name), JOB_NAME_MAXLEN)
       return slurm.ERROR
    end
@@ -358,16 +358,25 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
    -- QOS set by user. In this case, the script simply sets the partition
    -- accordingly.
    if job_desc.qos ~= nil then
-      local t = split(job_desc.qos, QOS_NAME_SEP)
+      if string.find(job_desc.qos, QOS_NAME_SEP) then
+         local t = split(job_desc.qos, QOS_NAME_SEP)
 
-      partition = t[1]
+         partition = t[1]
+      else
+         partition = nil
+      end
 
       if job_desc.partition == nil then
+         if partition == nil then
+            log_error("slurm_job_submit: QoS '%s' was specified without a partition and we cannot deduce it from the QoS",
+               job_desc.qos)
+            return slurm.ERROR
+         end
          job_desc.partition = partition
       -- if we have a partition for the job, checks it matches the QoS
-      -- unless it's a QoS we ignore
-      elseif IGNORED_QOS[job_desc.qos] == nil and job_desc.partition ~= partition then
-         log_error("slurm_job_submit: partition '%s' specified by user doesn't match QOS %s",
+      -- only if it's a QoS with QOS_NAME_SEP
+      elseif partition ~= nil and job_desc.partition ~= partition then
+         log_error("slurm_job_submit: partition '%s' specified by user doesn't match QOS '%s'",
             job_desc.partition, job_desc.qos)
          return slurm.ERROR
       end
@@ -494,7 +503,7 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
    -- check time limit
    if qos[job_desc.qos] ~= nil and qos[job_desc.qos]['duration'] ~= nil and
          job_desc.time_limit ~= nil and job_desc.time_limit > qos[job_desc.qos]['duration'] then
-      log_error("slurm_job_submit: job time limit (%u) is larger than QoS '%s' limit (%u)",
+      log_error("slurm_job_submit: job time limit (%u) is longer than the QoS '%s' limit (%u)",
          job_desc.time_limit, job_desc.qos, qos[job_desc.qos]['duration'])
       return slurm.ESLURM_INVALID_TIME_LIMIT
    end

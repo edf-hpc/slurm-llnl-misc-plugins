@@ -303,8 +303,8 @@ NULL           = 4294967294  -- numeric nil
 INFINITE       = 4294967294  -- max unsigned 32 bits integer value for slurm
 CORES_PER_NODE = 4
 ENFORCE_ACCOUNT = false      -- check qos/account compatibility, default to no
-JOB_NAME_REGEX  = "^[a-zA-Z0-9-_]+$"
-JOB_NAME_DESCRIPTION = "alphanumeric characters ('a-z', 'A-Z' and '0-9') plus '-' and '_'"
+JOB_NAME_REGEX  = "^[a-zA-Z0-9_:.-]+$"
+JOB_NAME_DESCRIPTION = "alphanumeric characters ('a-z', 'A-Z' and '0-9') plus '-', '_', '.' and ':'"
 JOB_NAME_MAXLEN = 40
 
 -- cf. slurm/slurm_errno.h

@@ -334,13 +334,13 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
    end
 
    if string.match(job_desc.name, JOB_NAME_REGEX) == nil then
-      log_error("slurm_job_submit: job name '%s' doesn't match the following: %s",
+      log_error("slurm_job_submit: job name %s doesn't match the following: %s",
          job_desc.name, JOB_NAME_DESCRIPTION)
       return slurm.ERROR
    end
 
    if string.len(job_desc.name) > JOB_NAME_MAXLEN then
-      log_error("slurm_job_submit: job name '%s' length (%d) is longer than allowed (%d)",
+      log_error("slurm_job_submit: job name %s length (%d) is longer than allowed (%d)",
          job_desc.name, string.len(job_desc.name), JOB_NAME_MAXLEN)
       return slurm.ERROR
    end
@@ -368,7 +368,7 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
 
       if job_desc.partition == nil then
          if partition == nil then
-            log_error("slurm_job_submit: QoS '%s' was specified without a partition and we cannot deduce it from the QoS",
+            log_error("slurm_job_submit: QoS %s was specified without a partition and we cannot deduce it from the QoS",
                job_desc.qos)
             return slurm.ERROR
          end
@@ -410,7 +410,7 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
       end
 
       if job_desc.partition ~= nil then
-         slurm.log_info("slurm_job_submit: partition '%s' specified by user.", job_desc.partition)
+         slurm.log_info("slurm_job_submit: partition %s specified by user.", job_desc.partition)
       else
          -- If the user did not set the partition, set the default
          -- partition in slurm configuration
@@ -446,7 +446,7 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
       end
 
       if qos_list[job_desc.partition] == nil then
-         log_error("slurm_job_submit: no QoS exists for partition '%s'", job_desc.partition)
+         log_error("slurm_job_submit: no QoS exists for partition %s", job_desc.partition)
          return slurm.ERROR
       end
 
@@ -503,7 +503,7 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
    -- check time limit
    if qos[job_desc.qos] ~= nil and qos[job_desc.qos]['duration'] ~= nil and
          job_desc.time_limit ~= nil and job_desc.time_limit > qos[job_desc.qos]['duration'] then
-      log_error("slurm_job_submit: job time limit (%u) is longer than the QoS '%s' limit (%u)",
+      log_error("slurm_job_submit: job time limit (%u) is longer than the QoS %s limit (%u)",
          job_desc.time_limit, job_desc.qos, qos[job_desc.qos]['duration'])
       return slurm.ESLURM_INVALID_TIME_LIMIT
    end

@@ -376,7 +376,7 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
       -- if we have a partition for the job, checks it matches the QoS
       -- only if it's a QoS with QOS_NAME_SEP
       elseif partition ~= nil and job_desc.partition ~= partition then
-         log_error("slurm_job_submit: partition '%s' specified by user doesn't match QOS '%s'",
+         log_error("slurm_job_submit: partition %s specified by user doesn't match QOS %s",
             job_desc.partition, job_desc.qos)
          return slurm.ERROR
       end

@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## Unrelease
+## [1.2.10] - 2022-02-08
+### Changed
+- job_submit.lua:
+  - Added '.' and ':' to the list of valid characters one can use for a job name
+  - Misc error formating fixes
+
+## [1.2.9] - 2022-01-25
+### Changed
+- slurm-gen-qos-conf:
+    - only writes QoSes matching our format (separated by '_' with the first item being a partition)
+- job_submit.lua:
+  - Make regex error message clearer by showing the list of allowed characters instead of the regex
+  - Exclude non matching QoS' names from partition validation: a QoS not matching the format specified above won't be checked for valid partition
 
 ## [1.2.8] - 2022-01-13
 ### Changed

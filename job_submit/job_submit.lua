@@ -355,6 +355,11 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
    local maxtime
    local maxcpus
 
+   -- If not set by user, set hard-coded timelimit
+   if job_desc.time_limit == NULL then -- no time limit
+      job_desc.time_limit = 60 -- 1 heure
+   end
+
    -- QOS set by user. In this case, the script simply sets the partition
    -- accordingly.
    if job_desc.qos ~= nil then
@@ -383,10 +388,6 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
    else
       -- The user did not set the QOS explicitely
 
-      -- If not set by user, set hard-coded timelimit
-      if job_desc.time_limit == NULL then -- no time limit
-         job_desc.time_limit = 60 -- 1 heure
-      end
       -- If not set by user, set hard-coded min cpus
       if job_desc.min_cpus == nil then -- no cpu limit
          job_desc.min_cpus = 1

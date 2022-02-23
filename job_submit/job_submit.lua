@@ -252,30 +252,28 @@ function track_wckey (job_desc, part_list, submit_uid)
    end
 
    if job_desc.wckey == nil then
-      if file_exists(WCKEY_USER_EXCEPTION_FILE) then
-         if line_present(WCKEY_USER_EXCEPTION_FILE, username) then
-            slurm.log_info("track_wckey: job from user:%s/%u has a valid wckey exception.",
-                           username, submit_uid)
-            return 0
-         end
+      if file_exists(WCKEY_USER_EXCEPTION_FILE) and line_present(WCKEY_USER_EXCEPTION_FILE, username) then
+         slurm.log_info("track_wckey: job from user:%s/%u has a valid wckey exception.",
+            username, submit_uid)
+         return 0
       end
       -- if WCKEY_USER_EXCEPTION_FILE does not exist or username name not found, return wckey error
       slurm.log_info("track_wckey: job from user:%s/%u didn't specify any valid wckey.",
-                     username, submit_uid)
-      return slurm.ERROR
+         username, submit_uid)
+      return ESLURM_INVALID_WCKEY
    else
      -- Convert wckey to lowercase  --
      job_desc.wckey = string.lower(job_desc.wckey)
      if line_present(WCKEY_CONF_FILE, job_desc.wckey) then
         -- wckey present in file, return OK
         slurm.log_info("track_wckey: job from user:%s/%u with wckey=%s.",
-                       username, submit_uid, tostring(job_desc.wckey))
+           username, submit_uid, tostring(job_desc.wckey))
         return 0
      else
         -- wckey not found, return wckey error
         slurm.log_info("track_wckey: job from user:%s/%u did specify an invalid wckey:%s",
-                       username, submit_uid, tostring(job_desc.wckey))
-        return slurm.ERROR
+           username, submit_uid, tostring(job_desc.wckey))
+        return ESLURM_INVALID_WCKEY
      end
    end
 
@@ -308,6 +306,9 @@ JOB_NAME_DESCRIPTION = "alphanumeric characters ('a-z', 'A-Z' and '0-9') plus '-
 JOB_NAME_MAXLEN = 40
 
 -- cf. slurm/slurm_errno.h
+ESLURM_INVALID_WCKEY = 2057
+ESLURM_INVALID_QOS = 2066
+
 WCKEY_CONF_FILE = CONF_DIR .. "/wckeysctl/wckeys"
 WCKEY_USER_EXCEPTION_FILE = CONF_DIR .. "/wckeysctl/wckeys_user_exception"
 
@@ -349,7 +350,7 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
    -- if unable to build QOS list, return ESLURM_INVALID_QOS
    if qos_list == nil then
       log_error("slurm_job_submit: cannot build QoS list")
-      return slurm.ERROR
+      return ESLURM_INVALID_QOS
    end
 
    local maxtime
@@ -373,9 +374,9 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
 
       if job_desc.partition == nil then
          if partition == nil then
-            log_error("slurm_job_submit: QoS %s was specified without a partition and we cannot deduce it from the QoS",
+            log_error("slurm_job_submit: QoS %s was specified but no partition and we cannot deduce it from the QoS",
                job_desc.qos)
-            return slurm.ERROR
+            return ESLURM_INVALID_QOS
          end
          job_desc.partition = partition
       -- if we have a partition for the job, checks it matches the QoS
@@ -383,7 +384,7 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
       elseif partition ~= nil and job_desc.partition ~= partition then
          log_error("slurm_job_submit: partition %s specified by user doesn't match QOS %s",
             job_desc.partition, job_desc.qos)
-         return slurm.ERROR
+         return ESLURM_INVALID_QOS
       end
    else
       -- The user did not set the QOS explicitely
@@ -497,7 +498,7 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
         job_desc.qos = found_qos_name
      else
         log_error("slurm_job_submit: couldn't find a QoS match")
-        return slurm.ERROR
+        return ESLURM_INVALID_QOS
      end
    end
 

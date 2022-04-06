@@ -80,7 +80,7 @@ end
 
 --========================================================================--
 
-function has_value (tab, val)
+function has_value(tab, val)
    -- Returns true if tab has val, false otherwise.
    -- tab: search table
    -- val: value to look for
@@ -148,7 +148,7 @@ end
 
 --========================================================================--
 
-function build_qos_list ()
+function build_qos_list()
    -- Read QOS configuration from sacctmgr command and create a multi-dimension table
    -- qos_list[qos_partition][qos_maxcpus][qos_duration][qos_name] = [account_1, ..., account_n]
    -- qos[qos_name] = {
@@ -327,7 +327,7 @@ end
 --
 --########################################################################--
 
-function slurm_job_submit ( job_desc, part_list, submit_uid )
+function slurm_job_submit(job_desc, part_list, submit_uid)
 
    status = track_wckey(job_desc, part_list, submit_uid)
    if status ~= 0 then
@@ -528,7 +528,7 @@ end
 
 --========================================================================--
 
-function slurm_job_modify ( job_desc, job_rec, part_list, modify_uid )
+function slurm_job_modify(job_desc, job_rec, part_list, modify_uid)
    return slurm.SUCCESS
 end
 

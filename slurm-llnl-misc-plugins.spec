@@ -1,12 +1,12 @@
 # Configuration Logic
 %define name slurm-llnl-misc-plugins
-%define version 1.2.11
+%define version 1.2.12
 %define debug_package %{nil}
 
 # Main preamble
 Summary: Miscelaneous plugins for Slurm open source scheduler
 Name: slurm-llnl-misc-plugins
-Version: 1.2.11
+Version: 1.2.12
 Release: 1%{?dist}.edf
 Source0: %{name}-%{version}.tar.gz
 License: GPLv3
@@ -222,6 +222,27 @@ The database is dumped in a local directory with the mysqldump tool.
 %config /etc/slurm/slurmdbd-backup.vars
 
 %changelog
+* Wed Apr 6 2022 Mathieu Chouquet-Stringer <mathieu-externe.chouquet-stringer@edf.fr> 1.2.12-1el8.edf
+- Aligned branch versions
+
+* Thu Feb 24 2022 Mathieu Chouquet-Stringer <mathieu-externe.chouquet-stringer@edf.fr> 1.2.11-1el8.edf
+- slurm-gen-qos-conf: Fixed syntax errors to make the script usable again
+- job_submit.lua:
+  - Removed unneeded spaces in function definitions
+  - Added a prefix to all log messages and reformatted them to include more information
+
+* Tue Feb 8 2022 Mathieu Chouquet-Stringer <mathieu-externe.chouquet-stringer@edf.fr> 1.2.10-1el8.edf
+- job_submit.lua:
+  - Added '.' and ':' to the list of valid characters one can use for a job name
+  - Misc error formating fixes
+
+* Tue Jan 25 2022 Mathieu Chouquet-Stringer <mathieu-externe.chouquet-stringer@edf.fr> 1.2.9-1el8.edf
+- slurm-gen-qos-conf:
+    - only writes QoSes matching our format (separated by '_' with the first item being a partition)
+- job_submit.lua:
+  - Make regex error message clearer by showing the list of allowed characters instead of the regex
+  - Exclude non matching QoS' names from partition validation: a QoS not matching the format specified above won't be checked for valid partition
+
 * Thu Jan 13 2022 Mathieu Chouquet-Stringer <mathieu-externe.chouquet-stringer@edf.fr> 1.2.8-1el8.edf
 - Bump to 1.2.8
 - slurm-gen-qos-conf: some cleaning and only only keep QoS which matches partitions

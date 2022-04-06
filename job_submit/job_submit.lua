@@ -80,7 +80,7 @@ end
 
 --========================================================================--
 
-function has_value (tab, val)
+function has_value(tab, val)
    -- Returns true if tab has val, false otherwise.
    -- tab: search table
    -- val: value to look for
@@ -148,7 +148,7 @@ end
 
 --========================================================================--
 
-function build_qos_list ()
+function build_qos_list()
    -- Read QOS configuration from sacctmgr command and create a multi-dimension table
    -- qos_list[qos_partition][qos_maxcpus][qos_duration][qos_name] = [account_1, ..., account_n]
    -- qos[qos_name] = {
@@ -167,8 +167,6 @@ function build_qos_list ()
    local qos_file
 
    if not file_exists(QOS_CONF) then
-      slurm.log_info("build_qos_list: qos file %s does not exist, failed to build QOS list",
-                     QOS_CONF)
       return nil
    end
 
@@ -244,35 +242,34 @@ function line_present(file, search)
 end
 
 -- check wckey among WCKEY_CONF_FILE and WCKEY_USER_EXCEPTION_FILE
-function track_wckey (job_desc, part_list, submit_uid)
-   username = job_desc.username
+function track_wckey(job_desc, part_list, submit_uid)
    -- if WCKEY_CONF_FILE does not exist, return OK
    if not file_exists(WCKEY_CONF_FILE) then
      return 0
    end
 
    if job_desc.wckey == nil then
-      if file_exists(WCKEY_USER_EXCEPTION_FILE) and line_present(WCKEY_USER_EXCEPTION_FILE, username) then
-         slurm.log_info("track_wckey: job from user:%s/%u has a valid wckey exception.",
-            username, submit_uid)
+      if file_exists(WCKEY_USER_EXCEPTION_FILE) and line_present(WCKEY_USER_EXCEPTION_FILE, job_desc.username) then
+         slurm.log_info("slurm_job_submit: job %s submitted by %s has a valid wckey exception",
+            job_desc.name, job_desc.username)
          return 0
       end
       -- if WCKEY_USER_EXCEPTION_FILE does not exist or username name not found, return wckey error
-      slurm.log_info("track_wckey: job from user:%s/%u didn't specify any valid wckey.",
-         username, submit_uid)
+      log_error("slurm_job_submit: error: job %s submitted by %s didn't specify a wckey",
+         job_desc.name, job_desc.username)
       return ESLURM_INVALID_WCKEY
    else
      -- Convert wckey to lowercase  --
      job_desc.wckey = string.lower(job_desc.wckey)
      if line_present(WCKEY_CONF_FILE, job_desc.wckey) then
         -- wckey present in file, return OK
-        slurm.log_info("track_wckey: job from user:%s/%u with wckey=%s.",
-           username, submit_uid, tostring(job_desc.wckey))
+        slurm.log_info("slurm_job_submit: job %s submitted by %s with wckey %s",
+           job_desc.name, job_desc.username, tostring(job_desc.wckey))
         return 0
      else
         -- wckey not found, return wckey error
-        slurm.log_info("track_wckey: job from user:%s/%u did specify an invalid wckey:%s",
-           username, submit_uid, tostring(job_desc.wckey))
+        log_error("slurm_job_submit: error: job %s submitted by %s specified an invalid wckey %s",
+           job_desc.name, job_desc.username, tostring(job_desc.wckey))
         return ESLURM_INVALID_WCKEY
      end
    end
@@ -315,7 +312,7 @@ WCKEY_USER_EXCEPTION_FILE = CONF_DIR .. "/wckeysctl/wckeys_user_exception"
 conf_file = CONF_DIR .. "/job_submit.conf"
 conf_fh = io.open (conf_file, "r")
 if conf_fh == nil then
-   slurm.log_info("slurm_job_modify: No readable %s found!", conf_file)
+   slurm.log_info("slurm_job_submit: No readable %s found!", conf_file)
 else
    io.close(conf_fh)
    dofile(conf_file)
@@ -327,7 +324,7 @@ end
 --
 --########################################################################--
 
-function slurm_job_submit ( job_desc, part_list, submit_uid )
+function slurm_job_submit(job_desc, part_list, submit_uid)
 
    status = track_wckey(job_desc, part_list, submit_uid)
    if status ~= 0 then
@@ -335,21 +332,22 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
    end
 
    if string.match(job_desc.name, JOB_NAME_REGEX) == nil then
-      log_error("slurm_job_submit: job name %s doesn't match the following: %s",
-         job_desc.name, JOB_NAME_DESCRIPTION)
+      log_error("slurm_job_submit: error: job name %s submitted by %s doesn't match the following: %s",
+         job_desc.name, job_desc.user_name, JOB_NAME_DESCRIPTION)
       return slurm.ERROR
    end
 
    if string.len(job_desc.name) > JOB_NAME_MAXLEN then
-      log_error("slurm_job_submit: job name %s length (%d) is longer than allowed (%d)",
-         job_desc.name, string.len(job_desc.name), JOB_NAME_MAXLEN)
+      log_error("slurm_job_submit: error: job name %s length (%d) submitted by %s is longer than allowed (%d)",
+         job_desc.name, string.len(job_desc.name), job_desc.user_name, JOB_NAME_MAXLEN)
       return slurm.ERROR
    end
 
    local qos_list, qos = build_qos_list()
    -- if unable to build QOS list, return ESLURM_INVALID_QOS
    if qos_list == nil then
-      log_error("slurm_job_submit: cannot build QoS list")
+      log_error("slurm_job_submit: error: QoS file %s does not exist, cannot build QoS list",
+         QOS_CONF)
       return ESLURM_INVALID_QOS
    end
 
@@ -374,16 +372,16 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
 
       if job_desc.partition == nil then
          if partition == nil then
-            log_error("slurm_job_submit: QoS %s was specified but no partition and we cannot deduce it from the QoS",
-               job_desc.qos)
+            log_error("slurm_job_submit: error: QoS %s was specified by %s for job %s but without a partition and we cannot deduce it from the QoS",
+               job_desc.qos, job_desc.user_name, job_desc.name)
             return ESLURM_INVALID_QOS
          end
          job_desc.partition = partition
       -- if we have a partition for the job, checks it matches the QoS
       -- only if it's a QoS with QOS_NAME_SEP
       elseif partition ~= nil and job_desc.partition ~= partition then
-         log_error("slurm_job_submit: partition %s specified by user doesn't match QOS %s",
-            job_desc.partition, job_desc.qos)
+         log_error("slurm_job_submit: error: partition %s for job %s submitted by %s doesn't match QOS %s",
+            job_desc.partition, job_desc.name, job_desc.user_name, job_desc.qos)
          return ESLURM_INVALID_QOS
       end
    else
@@ -412,7 +410,8 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
       end
 
       if job_desc.partition ~= nil then
-         slurm.log_info("slurm_job_submit: partition %s specified by user.", job_desc.partition)
+         slurm.log_info("slurm_job_submit: partition %s specified by user %s for job %s",
+            job_desc.partition, job_desc.user_name, job_desc.name)
       else
          -- If the user did not set the partition, set the default
          -- partition in slurm configuration
@@ -423,7 +422,8 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
             end
          end
          if job_desc.partition == nil then
-            log_error("slurm_job_submit: couldn't find a default partition")
+            log_error("slurm_job_submit: error: couldn't find a default partition for job %s submitted by %s",
+               job_desc.name, job_desc.user_name)
             return slurm.ERROR
          end
          slurm.log_info("slurm_job_submit: using default partition %s.", job_desc.partition)
@@ -434,21 +434,23 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
       if ENFORCE_ACCOUNT then
           if job_desc.account == nil then
              if job_desc.default_account == nil then
-                slurm.log_info("slurm_job_submit: user %s has no default account, unable to assign default account.",
-                   job_desc.user_name)
+                log_error("slurm_job_submit: error: user %s for job %s has no default account, unable to assign default account",
+                   job_desc.user_name, job_desc.name)
                 return slurm.ESLURM_INVALID_ACCOUNT
              else
-                slurm.log_info("slurm_job_submit: no account specified by user %s, using default account %s.",
-                   job_desc.user_name, job_desc.default_account)
+                slurm.log_info("slurm_job_submit: no account specified by user %s for job %s, using default account %s",
+                   job_desc.user_name, job_desc.name, job_desc.default_account)
                 job_desc.account = job_desc.default_account
              end
           else
-             slurm.log_info("slurm_job_submit: account %s specified by user %s.", job_desc.account, job_desc.user_name)
+             slurm.log_info("slurm_job_submit: account %s specified by user %s for job %s",
+                job_desc.account, job_desc.user_name, job_desc.name)
           end
       end
 
       if qos_list[job_desc.partition] == nil then
-         log_error("slurm_job_submit: no QoS exists for partition %s", job_desc.partition)
+         log_error("slurm_job_submit: error: no QoS exists for partition %s specified by user %s for job %s",
+            job_desc.partition, job_desc.user_name, job_desc.name)
          return slurm.ERROR
       end
 
@@ -497,7 +499,8 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
         slurm.log_info("slurm_job_submit: finally setting qos %s", found_qos_name)
         job_desc.qos = found_qos_name
      else
-        log_error("slurm_job_submit: couldn't find a QoS match")
+        log_error("slurm_job_submit: error: couldn't find a QoS match for job %s submitted by %s with time limit %u and partition %s",
+           job_desc.name, job_desc.user_name, job_desc.time_limit, job_desc.partition)
         return ESLURM_INVALID_QOS
      end
    end
@@ -505,8 +508,8 @@ function slurm_job_submit ( job_desc, part_list, submit_uid )
    -- check time limit
    if qos[job_desc.qos] ~= nil and qos[job_desc.qos]['duration'] ~= nil and
          job_desc.time_limit ~= nil and job_desc.time_limit > qos[job_desc.qos]['duration'] then
-      log_error("slurm_job_submit: job time limit (%u) is longer than the QoS %s limit (%u)",
-         job_desc.time_limit, job_desc.qos, qos[job_desc.qos]['duration'])
+      log_error("slurm_job_submit: error: job time limit (%u) specified by %s for job %s is longer than the QoS %s time limit (%u)",
+         job_desc.time_limit, job_desc.user_name, job_desc.name, job_desc.qos, qos[job_desc.qos]['duration'])
       return slurm.ESLURM_INVALID_TIME_LIMIT
    end
 
@@ -528,10 +531,10 @@ end
 
 --========================================================================--
 
-function slurm_job_modify ( job_desc, job_rec, part_list, modify_uid )
+function slurm_job_modify(job_desc, job_rec, part_list, modify_uid)
    return slurm.SUCCESS
 end
 
-slurm.log_info("initialized")
+slurm.log_info("slurm_job_submit: initialized")
 
 return slurm.SUCCESS

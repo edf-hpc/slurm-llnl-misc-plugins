@@ -108,9 +108,9 @@ for qos_row in qos_reader:
     wall = qos_row['walltime']
     cpu = qos_row['max_cpus']
 
-    if name = '':
+    if not name or name == '':
         print("Skipping QoS because it has no name (%s)" %
-              ', '.join(["%s: %s" % (k, v) for k, v in qos_row.items()))
+              ', '.join(["%s: %s" % (k, v) for k, v in qos_row.items()]))
         continue
     if not wall and not cpu:
         print("Skipping QoS '%s' since MaxWall and MaxCPUs are missing" % name)

@@ -3,7 +3,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
-## Unrelease
+## Unreleased
+
+## [1.2.11] - 2022-04-06
+### Changed
+- slurm-gen-qos-conf: Fixed syntax errors to make the script usable again
+- job_submit.lua:
+  - Removed unneeded spaces in function definitions
+  - Added a prefix to all log messages and reformatted them to include more information
+
 ## [1.2.10] - 2022-02-08
 ### Changed
 - job_submit.lua:

@@ -16,8 +16,8 @@ fi
 
 if ! systemctl --user is-active auks-renewer 
 then
-  echo "auks-renewer unit is not running" |logger -s
+  echo "auks-renewer unit is not running" |logger
 fi
 # Put some context in the logs
-klist |logger
-klist -C "${canonical_ccache}" |logger
+klist 2>&1 |logger
+klist -C "${canonical_ccache}" 2>&1 |logger

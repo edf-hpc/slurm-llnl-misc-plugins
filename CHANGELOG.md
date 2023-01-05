@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+### Fixed
+- wckeys: fix insertion on empty SlurmDBD wckey table (#8)
+
 ## [1.2.13] - 2022-05-18
 ### Fixed
 - epilog: remove TaskEpilog kerberos_lustre.sh messages on stderr

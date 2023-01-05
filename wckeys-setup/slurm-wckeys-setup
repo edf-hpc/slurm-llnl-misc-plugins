@@ -158,13 +158,13 @@ INSERT INTO ${DB_NAME}.${CLUSTERNAME}_wckey_table
   (creation_time, mod_time, wckey_name, user)
 SELECT
   '${DATE}','${DATE}','${key}','root'
-FROM ${DB_NAME}.${CLUSTERNAME}_wckey_table
-WHERE '${key}' NOT IN
+WHERE NOT EXISTS
 (
-  SELECT wckey_name
+  SELECT id_wckey
   FROM ${DB_NAME}.${CLUSTERNAME}_wckey_table
+  WHERE wckey_name = '${key}'
 )
-LIMIT 1
+LIMIT 1;
 EOF
   print_msg "Adding new wckey= ${key}"
   mysql --host=${StorageHost} --user=${StorageUser} --password=${StoragePass} < ${TMP_FILE_MYSQL}

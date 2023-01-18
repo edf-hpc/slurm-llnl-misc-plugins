@@ -6,7 +6,7 @@
 # Main preamble
 Summary: Miscelaneous plugins for Slurm open source scheduler
 Name: slurm-llnl-misc-plugins
-Version: 1.2.13
+Version: 1.2.14
 Release: 1%{?dist}.edf
 Source0: %{name}-%{version}.tar.gz
 License: GPLv3

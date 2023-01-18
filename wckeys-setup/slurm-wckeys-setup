@@ -50,6 +50,9 @@ slurm_conf_dir="/etc/slurm"
 [ -f "${default_dir}/wckeysctl" ] && source "${default_dir}/wckeysctl"
 [ -f "${slurm_conf_dir}/slurmdbd.conf" ] && source "${slurm_conf_dir}/slurmdbd.conf"
 
+MAX_PROJECT_LENGTH="${MAX_PROJECT_LENGTH:-20}"
+MAX_APP_LENGTH="${MAX_APP_LENGTH:-40}"
+
 print_error () {
         logger -s -t wckeys-setup "ERROR: ${2}"
         clean_tmpfs
@@ -119,8 +122,22 @@ do
       tr '[:blank:]' '_' | sed -r -e 's/[_]+/_/g' -e 's/^[_]+//g' -e 's/[_]+$//g' | sort -u)
       for project in ${CODES_PROJETS_LIST}
       do
+        # Check format of project name or fail
+        if [ ${#project} -gt ${MAX_PROJECT_LENGTH} ]
+        then
+          print_error 1 "Invalid format of project name '${project}' (length over ${MAX_PROJECT_LENGTH} characters)"
+          clean_tmpfs
+          exit 1
+        fi
         for application in ${CODES_METIERS_LIST}
         do
+          # Check format of application name or fail
+          if [ ${#application} -gt ${MAX_APP_LENGTH} ]
+          then
+            print_error 1 "Invalid format of application name '${application}' (length over ${MAX_APP_LENGTH} characters)"
+            clean_tmpfs
+            exit 1
+          fi
           echo "${project}:${application}"
         done >> ${WCKEYS_TMP_FILE}
       done

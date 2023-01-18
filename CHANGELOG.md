@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 - wckeys: fix insertion on empty SlurmDBD wckey table (#8)
+- wckeys: make curl fail when HTTP server does not respond status code 200 (ok)
 
 ## [1.2.13] - 2022-05-18
 ### Fixed

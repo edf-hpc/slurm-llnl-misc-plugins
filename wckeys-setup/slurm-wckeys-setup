@@ -87,7 +87,9 @@ for PAREO_ENTRY in ${PAREO_FILE}
 do
   print_msg "Retrieve PAREO file ${iteration}"
   CODES_PROJETS_FILE_CURRENT=$(mktemp -p ${TMP_MNT_POINT})
-  curl -s ${PAREO_ENTRY} -o ${CODES_PROJETS_FILE_CURRENT}
+  # Curl is executed with --fail argument to exit with non-zero code when HTTP
+  # server does not respond with HTTP/200 (OK) status code.
+  curl --silent --fail ${PAREO_ENTRY} --output ${CODES_PROJETS_FILE_CURRENT}
   if [ $? -ne 0 ]
   then
     print_error 1 "Retrieving ${PAREO_ENTRY}"
@@ -102,7 +104,7 @@ do
     CODES_METIERS_ENTRY=$(echo ${CODES_FILE} | cut -f${nb} -d" ")
     print_msg "Retrieve METIERS file ${iteration}"
     CODES_METIERS_FILE_CURRENT=$(mktemp -p ${TMP_MNT_POINT})
-    curl -s ${CODES_METIERS_ENTRY} -o ${CODES_METIERS_FILE_CURRENT}
+    curl --silent --fail ${CODES_METIERS_ENTRY} --output ${CODES_METIERS_FILE_CURRENT}
     if [ $? -ne 0 ]
     then
       print_error 1 "Retrieving ${CODES_METIERS_ENTRY}"

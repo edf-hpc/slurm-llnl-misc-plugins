@@ -1,6 +1,6 @@
 # Configuration Logic
 %define name slurm-llnl-misc-plugins
-%define version 1.2.13
+%define version 1.2.14
 %define debug_package %{nil}
 
 # Main preamble
@@ -222,6 +222,9 @@ The database is dumped in a local directory with the mysqldump tool.
 %config /etc/slurm/slurmdbd-backup.vars
 
 %changelog
+* Wed Jan 18 2023 Rémi Palancher <remi-externe.palancher@edf.fr> 1.2.14-1el8.edf
+- New upstream release 1.2.14
+
 * Wed May 18 2022 Rémi Palancher <remi-externe.palancher@edf.fr> 1.2.13-1el8.edf
 - Remove TaskEpilog kerberos_lustre.sh messages on stderr
 

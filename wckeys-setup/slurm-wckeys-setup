@@ -50,6 +50,9 @@ slurm_conf_dir="/etc/slurm"
 [ -f "${default_dir}/wckeysctl" ] && source "${default_dir}/wckeysctl"
 [ -f "${slurm_conf_dir}/slurmdbd.conf" ] && source "${slurm_conf_dir}/slurmdbd.conf"
 
+MAX_PROJECT_LENGTH="${MAX_PROJECT_LENGTH:-20}"
+MAX_APP_LENGTH="${MAX_APP_LENGTH:-40}"
+
 print_error () {
         logger -s -t wckeys-setup "ERROR: ${2}"
         clean_tmpfs
@@ -87,7 +90,9 @@ for PAREO_ENTRY in ${PAREO_FILE}
 do
   print_msg "Retrieve PAREO file ${iteration}"
   CODES_PROJETS_FILE_CURRENT=$(mktemp -p ${TMP_MNT_POINT})
-  curl -s ${PAREO_ENTRY} -o ${CODES_PROJETS_FILE_CURRENT}
+  # Curl is executed with --fail argument to exit with non-zero code when HTTP
+  # server does not respond with HTTP/200 (OK) status code.
+  curl --silent --fail ${PAREO_ENTRY} --output ${CODES_PROJETS_FILE_CURRENT}
   if [ $? -ne 0 ]
   then
     print_error 1 "Retrieving ${PAREO_ENTRY}"
@@ -102,7 +107,7 @@ do
     CODES_METIERS_ENTRY=$(echo ${CODES_FILE} | cut -f${nb} -d" ")
     print_msg "Retrieve METIERS file ${iteration}"
     CODES_METIERS_FILE_CURRENT=$(mktemp -p ${TMP_MNT_POINT})
-    curl -s ${CODES_METIERS_ENTRY} -o ${CODES_METIERS_FILE_CURRENT}
+    curl --silent --fail ${CODES_METIERS_ENTRY} --output ${CODES_METIERS_FILE_CURRENT}
     if [ $? -ne 0 ]
     then
       print_error 1 "Retrieving ${CODES_METIERS_ENTRY}"
@@ -117,8 +122,22 @@ do
       tr '[:blank:]' '_' | sed -r -e 's/[_]+/_/g' -e 's/^[_]+//g' -e 's/[_]+$//g' | sort -u)
       for project in ${CODES_PROJETS_LIST}
       do
+        # Check format of project name or fail
+        if [ ${#project} -gt ${MAX_PROJECT_LENGTH} ]
+        then
+          print_error 1 "Invalid format of project name '${project}' (length over ${MAX_PROJECT_LENGTH} characters)"
+          clean_tmpfs
+          exit 1
+        fi
         for application in ${CODES_METIERS_LIST}
         do
+          # Check format of application name or fail
+          if [ ${#application} -gt ${MAX_APP_LENGTH} ]
+          then
+            print_error 1 "Invalid format of application name '${application}' (length over ${MAX_APP_LENGTH} characters)"
+            clean_tmpfs
+            exit 1
+          fi
           echo "${project}:${application}"
         done >> ${WCKEYS_TMP_FILE}
       done
@@ -158,13 +177,13 @@ INSERT INTO ${DB_NAME}.${CLUSTERNAME}_wckey_table
   (creation_time, mod_time, wckey_name, user)
 SELECT
   '${DATE}','${DATE}','${key}','root'
-FROM ${DB_NAME}.${CLUSTERNAME}_wckey_table
-WHERE '${key}' NOT IN
+WHERE NOT EXISTS
 (
-  SELECT wckey_name
+  SELECT id_wckey
   FROM ${DB_NAME}.${CLUSTERNAME}_wckey_table
+  WHERE wckey_name = '${key}'
 )
-LIMIT 1
+LIMIT 1;
 EOF
   print_msg "Adding new wckey= ${key}"
   mysql --host=${StorageHost} --user=${StorageUser} --password=${StoragePass} < ${TMP_FILE_MYSQL}

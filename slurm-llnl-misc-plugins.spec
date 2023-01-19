@@ -189,7 +189,7 @@ The database is dumped in a local directory with the mysqldump tool.
 # slurm-llnl-job-submit-plugin
 %files -n slurm-llnl-job-submit-plugin
 %defattr(-,root,root,-)
-%config /etc/slurm/wckeysctl
+%config(noreplace) /etc/slurm/wckeysctl
 /usr/lib/slurm/job_submit.lua
 /usr/sbin/slurm-gen-qos-conf
 
@@ -199,27 +199,27 @@ The database is dumped in a local directory with the mysqldump tool.
 %files -n slurm-llnl-setup-mysql
 %defattr(-,root,root,-)
 /usr/sbin/slurm-mysql-setup
-%config /etc/slurm/slurm-mysql.conf
+%config(noreplace) /etc/slurm/slurm-mysql.conf
 
 #BATCH slurm-llnl-setup-wckeys
 %files -n slurm-llnl-setup-wckeys
 %defattr(-,root,root,-)
 /usr/sbin/slurm-wckeys-setup
-/etc/sysconfig/wckeysctl
-/etc/cron.d/slurm-llnl-setup-wckeys
+%config(noreplace) /etc/sysconfig/wckeysctl
+%config(noreplace) /etc/cron.d/slurm-llnl-setup-wckeys
 
 #BATCH slurm-llnl-sync-accounts
 %files -n slurm-llnl-sync-accounts
 /usr/sbin/slurm-sync-accounts
-%config /etc/slurm/sync-accounts.conf
-%config /etc/cron.d/slurm-llnl-sync-accounts
+%config(noreplace) /etc/slurm/sync-accounts.conf
+%config(noreplace) /etc/cron.d/slurm-llnl-sync-accounts
 
 #BATCH slurmdbd-backup
 %files -n slurmdbd-backup
 /var/backups/slurmdbd
 /var/backups/slurmdbd/database
 /usr/sbin/slurmdbd-backup
-%config /etc/slurm/slurmdbd-backup.vars
+%config(noreplace) /etc/slurm/slurmdbd-backup.vars
 
 %changelog
 * Wed Jan 18 2023 Rémi Palancher <remi-externe.palancher@edf.fr> 1.2.14-1el8.edf

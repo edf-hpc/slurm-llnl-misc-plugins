@@ -7,7 +7,7 @@
 Summary: Miscelaneous plugins for Slurm open source scheduler
 Name: %{name}
 Version: %{version}
-Release: 1%{?dist}.edf
+Release: 2%{?dist}.edf
 Source0: %{name}-%{version}.tar.gz
 License: GPLv3
 Group: Application/System
@@ -222,6 +222,11 @@ The database is dumped in a local directory with the mysqldump tool.
 %config(noreplace) /etc/slurm/slurmdbd-backup.vars
 
 %changelog
+* Thu Jan 19 2023 Rémi Palancher <remi-externe.palancher@edf.fr> 1.2.14-2el8.edf
+- Use version/name macros to avoid duplication
+- Declare all files in /etc as %config(noreplace)
+- Fix bogus dates in changelog
+
 * Wed Jan 18 2023 Rémi Palancher <remi-externe.palancher@edf.fr> 1.2.14-1el8.edf
 - New upstream release 1.2.14
 

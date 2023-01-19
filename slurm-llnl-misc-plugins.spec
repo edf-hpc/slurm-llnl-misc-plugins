@@ -271,11 +271,11 @@ The database is dumped in a local directory with the mysqldump tool.
 - Bump to 1.2.6
 - improive kerberos prolog epilog scripts
 
-* Thu Feb 19 2021 Thomas Hamel <thomas-t.hamel@edf.fr> 1.2.5-1el8.edf
+* Fri Feb 19 2021 Thomas Hamel <thomas-t.hamel@edf.fr> 1.2.5-1el8.edf
 - Bump to 1.2.5
 - improive kerberos prolog epilog scripts
 
-* Thu Feb 19 2021 Thomas Hamel <thomas-t.hamel@edf.fr> 1.2.4-2el8.edf
+* Fri Feb 19 2021 Thomas Hamel <thomas-t.hamel@edf.fr> 1.2.4-2el8.edf
 - Change version tag to work with jenkins
 
 * Thu Feb 18 2021 Thomas Hamel <thomas-t.hamel@edf.fr> 1.2.4-1el8.edf

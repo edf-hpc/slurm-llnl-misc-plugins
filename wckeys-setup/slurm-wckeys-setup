@@ -177,6 +177,7 @@ INSERT INTO ${DB_NAME}.${CLUSTERNAME}_wckey_table
   (creation_time, mod_time, wckey_name, user)
 SELECT
   '${DATE}','${DATE}','${key}','root'
+FROM DUAL
 WHERE NOT EXISTS
 (
   SELECT id_wckey

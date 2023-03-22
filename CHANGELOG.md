@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
+### Fixed
+- wckeys: modify SQL INSERT request to avoid MariaDB regression with SELECT without FROM
 
 ## [1.2.14] - 2023-01-18
 ### Added

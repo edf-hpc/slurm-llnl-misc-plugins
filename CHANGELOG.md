@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+## [1.2.15] - 2023-04-05
+### Fixed
+- wckeys: modify SQL INSERT request to avoid MariaDB regression with SELECT without FROM
+
 ## [1.2.14] - 2023-01-18
 ### Added
 - wckeys: validate format of project/application codes against maximum lengths

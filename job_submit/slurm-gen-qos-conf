@@ -142,18 +142,20 @@ for qos_row in qos_reader:
     accounts = ''
     if name in qos_accounts:
         accounts = ','.join(qos_accounts[name])
-    qos_conf_l = '|'.join([name, wall, cpu, accounts]) + '\n'
+    qos_conf_l = '|'.join([name, wall, cpu, accounts])
 
     if qos_conf_l:
         qos_conf.append(qos_conf_l)
 
 if qos_conf:
+    qos_conf = sorted(qos_conf, key=lambda k: k[:k.index('|')])
     if not args['dry_run']:
         with open(qos_conf_file, 'w') as qosfile:
-            qosfile.writelines(sorted(qos_conf, reverse=True))
+            qosfile.writelines('\n'.join(qos_conf))
+            qosfile.write('\n')
     else:
         print('\n%s configuration file would contain:\n%s' % (qos_conf_file,
-              ''.join(sorted(qos_conf, reverse=True))), end='')
+              '\n'.join(qos_conf)))
 else:
     # no valid qos line found in output of sacctmgr cmd
     if not args['dry_run']:

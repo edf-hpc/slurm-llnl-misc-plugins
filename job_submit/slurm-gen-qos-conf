@@ -65,12 +65,12 @@ def read_csv_cmd(cmd, fieldnames):
 
     return csv.DictReader(output_lines, fieldnames=fieldnames, delimiter='|')
 
-def get_qos_accounts():
+def get_qos_accounts(include_user=False):
     """For a dict with all QOS except 'normal' as keys and the list of allowed
        accounts as values."""
-    cmd = ['sacctmgr', '--noheader', '--parsable', 'show', 'associations', 'format="account,qos"']
+    cmd = ['sacctmgr', '--noheader', '--parsable2', 'show', 'associations', 'format="account,user,qos"']
 
-    fieldnames = ['account', 'qos']
+    fieldnames = ['account', 'user', 'qos']
     reader = read_csv_cmd(cmd, fieldnames)
 
     result = {}
@@ -79,6 +79,9 @@ def get_qos_accounts():
         account = row['account']
         if account in EXCLUDED_ACCOUNTS:
             continue  # jump to next line
+        # Skip user associations
+        if not include_user and row['user']:
+            continue
         qos_list = row['qos'].split(',')
         for qos in qos_list:
             if qos not in result:
@@ -106,7 +109,7 @@ qos_conf_file = args['output']
 qos_accounts = get_qos_accounts(args['user'])
 
 # run sacctmgr to get the list of qos
-SACCT_CMD = ['sacctmgr', '--noheader', '--parsable', 'show', 'qos', 'format="Name,MaxWall,MaxCPUs"']
+SACCT_CMD = ['sacctmgr', '--noheader', '--parsable2', 'show', 'qos', 'format="Name,MaxWall,MaxCPUs"']
 SACCT_FIELDNAMES = ['name', 'walltime', 'max_cpus']
 qos_reader = read_csv_cmd(SACCT_CMD, SACCT_FIELDNAMES)
 

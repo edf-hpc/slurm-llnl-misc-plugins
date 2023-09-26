@@ -5,6 +5,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+## [1.2.16] - 2023-09-21
+### Fixed
+- job_submit.lua: Fixed a typo where username wasn't spelled properly (it's user_name)
+### Added
+- slurm-gen-qos-conf:
+  - skip users' QoSes by default
+  - added multiple command line arguments to:
+    - specify the output file
+    - run in dry mode
+    - include users' QoSes
+    - include all QoSes (by default we exclude those not containing '_')
+
 ## [1.2.15] - 2023-04-05
 ### Fixed
 - wckeys: modify SQL INSERT request to avoid MariaDB regression with SELECT without FROM

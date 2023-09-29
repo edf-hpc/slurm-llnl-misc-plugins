@@ -42,11 +42,14 @@
 import subprocess
 import sys
 import csv
+import argparse
 
 # list of accounts to ignore
 EXCLUDED_ACCOUNTS = ['root']
 # Separator for QoSes
 QOS_SEP = '_'
+# Default conf file
+QOS_CONF_FILE = "/etc/slurm/qos.conf"
 
 def read_csv_cmd(cmd, fieldnames):
     """ Execute a cmd and extract fieldnames separated by a '|' delimiter"""
@@ -62,12 +65,12 @@ def read_csv_cmd(cmd, fieldnames):
 
     return csv.DictReader(output_lines, fieldnames=fieldnames, delimiter='|')
 
-def get_qos_accounts():
+def get_qos_accounts(include_user=False):
     """For a dict with all QOS except 'normal' as keys and the list of allowed
        accounts as values."""
-    cmd = ['sacctmgr', '--noheader', '--parsable', 'show', 'associations', 'format="account,qos"']
+    cmd = ['sacctmgr', '--noheader', '--parsable2', 'show', 'associations', 'format="account,user,qos"']
 
-    fieldnames = ['account', 'qos']
+    fieldnames = ['account', 'user', 'qos']
     reader = read_csv_cmd(cmd, fieldnames)
 
     result = {}
@@ -76,6 +79,9 @@ def get_qos_accounts():
         account = row['account']
         if account in EXCLUDED_ACCOUNTS:
             continue  # jump to next line
+        # Skip user associations
+        if not include_user and row['user']:
+            continue
         qos_list = row['qos'].split(',')
         for qos in qos_list:
             if qos not in result:
@@ -85,12 +91,25 @@ def get_qos_accounts():
 
     return result
 
-QOS_CONF = "/etc/slurm/qos.conf"
+parser = argparse.ArgumentParser(
+    prog='slurm-gen-qos-conf',
+    description='Generate Qos config file %s used by job_submit.lua' % QOS_CONF_FILE)
+parser.add_argument('-n', '--dry-run', action='store_true', default=False,
+                    help="Don't overwrite anything and just show what the script would generate")
+parser.add_argument('-o', '--output', action='store', default=QOS_CONF_FILE,
+                    help="output file instead of %s" % QOS_CONF_FILE)
+parser.add_argument('-a', '--all', action='store_true', default=False,
+                    help="by default QoSes which don't contain '%s' are skipped, include them all" % QOS_SEP)
+parser.add_argument('-u', '--user', action='store_true', default=False,
+                    help="by default QoSes which are associated to users are skipped, include them all")
+args = vars(parser.parse_args())
 
-qos_accounts = get_qos_accounts()
+qos_conf_file = args['output']
+
+qos_accounts = get_qos_accounts(args['user'])
 
 # run sacctmgr to get the list of qos
-SACCT_CMD = ['sacctmgr', '--noheader', '--parsable', 'show', 'qos', 'format="Name,MaxWall,MaxCPUs"']
+SACCT_CMD = ['sacctmgr', '--noheader', '--parsable2', 'show', 'qos', 'format="Name,MaxWall,MaxCPUs"']
 SACCT_FIELDNAMES = ['name', 'walltime', 'max_cpus']
 qos_reader = read_csv_cmd(SACCT_CMD, SACCT_FIELDNAMES)
 
@@ -115,7 +134,7 @@ for qos_row in qos_reader:
     if not wall and not cpu:
         print("Skipping QoS '%s' since MaxWall and MaxCPUs are missing" % name)
         continue
-    if QOS_SEP not in name:
+    if not args['all'] and QOS_SEP not in name:
         print("Skipping QoS '%s' because it is not separated by '%s'" %
               (name, QOS_SEP))
         continue
@@ -123,14 +142,23 @@ for qos_row in qos_reader:
     accounts = ''
     if name in qos_accounts:
         accounts = ','.join(qos_accounts[name])
-    qos_conf_l = '|'.join([name, wall, cpu, accounts]) + '\n'
+    qos_conf_l = '|'.join([name, wall, cpu, accounts])
 
     if qos_conf_l:
         qos_conf.append(qos_conf_l)
 
 if qos_conf:
-    with open(QOS_CONF, 'w') as qosfile:
-        qosfile.writelines(sorted(qos_conf, reverse=True))
+    qos_conf = sorted(qos_conf, key=lambda k: k[:k.index('|')])
+    if not args['dry_run']:
+        with open(qos_conf_file, 'w') as qosfile:
+            qosfile.writelines('\n'.join(qos_conf))
+            qosfile.write('\n')
+    else:
+        print('\n%s configuration file would contain:\n%s' % (qos_conf_file,
+              '\n'.join(qos_conf)))
 else:
     # no valid qos line found in output of sacctmgr cmd
-    print("QoS conf is empty, did not write %s" % (QOS_CONF))
+    if not args['dry_run']:
+        print("QoS conf is empty, did not write %s" % (qos_conf_file))
+    else:
+        print("\nQoS conf is empty, nothing to write (dry run mode)")

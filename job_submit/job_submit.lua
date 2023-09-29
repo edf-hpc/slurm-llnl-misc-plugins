@@ -249,14 +249,14 @@ function track_wckey(job_desc, part_list, submit_uid)
    end
 
    if job_desc.wckey == nil then
-      if file_exists(WCKEY_USER_EXCEPTION_FILE) and line_present(WCKEY_USER_EXCEPTION_FILE, job_desc.username) then
+      if file_exists(WCKEY_USER_EXCEPTION_FILE) and line_present(WCKEY_USER_EXCEPTION_FILE, job_desc.user_name) then
          slurm.log_info("slurm_job_submit: job %s submitted by %s has a valid wckey exception",
-            job_desc.name, job_desc.username)
+            job_desc.name, job_desc.user_name)
          return 0
       end
       -- if WCKEY_USER_EXCEPTION_FILE does not exist or username name not found, return wckey error
       log_error("slurm_job_submit: error: job %s submitted by %s didn't specify a wckey",
-         job_desc.name, job_desc.username)
+         job_desc.name, job_desc.user_name)
       return ESLURM_INVALID_WCKEY
    else
      -- Convert wckey to lowercase  --
@@ -264,12 +264,12 @@ function track_wckey(job_desc, part_list, submit_uid)
      if line_present(WCKEY_CONF_FILE, job_desc.wckey) then
         -- wckey present in file, return OK
         slurm.log_info("slurm_job_submit: job %s submitted by %s with wckey %s",
-           job_desc.name, job_desc.username, tostring(job_desc.wckey))
+           job_desc.name, job_desc.user_name, tostring(job_desc.wckey))
         return 0
      else
         -- wckey not found, return wckey error
         log_error("slurm_job_submit: error: job %s submitted by %s specified an invalid wckey %s",
-           job_desc.name, job_desc.username, tostring(job_desc.wckey))
+           job_desc.name, job_desc.user_name, tostring(job_desc.wckey))
         return ESLURM_INVALID_WCKEY
      end
    end

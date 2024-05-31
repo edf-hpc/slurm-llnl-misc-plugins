@@ -49,13 +49,14 @@ print_error () {
 mysqldump_parameters=(
  "--defaults-extra-file=${DBMAINCONF}"
  "-F"
- "-l"
 )
 
 ## --single-transaction: avoid locking the database during dump
 if [[ "x${SINGLE_TRANSACTION}" != "xfalse" ]]
 then
   mysqldump_parameters+=( "--single-transaction" )
+else
+  mysqldump_parameters+=( "--lock-tables" )
 fi
 
 if [ -d ${BKDIR} ]

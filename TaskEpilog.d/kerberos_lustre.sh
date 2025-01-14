@@ -14,10 +14,11 @@ then
   exit 0
 fi
 
-if ! systemctl --user is-active auks-renewer 
+export XDG_RUNTIME_DIR="/run/user/${user_numerical_id}"
+if ! systemctl --user is-active auks-renewer > /dev/null 2>&1
 then
-  echo "auks-renewer unit is not running" |logger
+  echo "auks-renewer unit is not running" | logger
 fi
 # Put some context in the logs
 klist 2>&1 |logger
-klist -C "${canonical_ccache}" 2>&1 |logger
+klist -C "${canonical_ccache}" 2>&1 | logger

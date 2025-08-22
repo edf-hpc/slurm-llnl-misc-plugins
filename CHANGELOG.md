@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+## [2.1.0] - 2025-08-22
+
+### Fixed
+- Version bump to resync the version with the el9 packaging
+
 ## [1.3.0] - 2025-08-22
 
 ### Added

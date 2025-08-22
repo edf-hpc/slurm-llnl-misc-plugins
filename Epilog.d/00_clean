@@ -5,28 +5,32 @@
 # an allocated node SLURM will not kill that process without this
 # script being executed as an epilog.
 
+# It will also clean all files on /tmp if the last job of the user finished.
+
 logger "EPILOG[INFO][$SLURM_JOB_ID]: Starting clean Epilog for job $SLURM_JOB_ID"
 
 if [ x$SLURM_UID == "x" ] ; then 
-	logger "EPILOG[ERROR][$SLURM_JOB_ID]: exiting prematurely because SLURM_UID is not defined: '${SLURM_UID}'"
-	exit 0
+  logger "EPILOG[ERROR][$SLURM_JOB_ID]: exiting prematurely because SLURM_UID is not defined: '${SLURM_UID}'"
+  exit 0
 fi
 if [ x$SLURM_JOB_ID == "x" ] ; then 
-	logger "EPILOG[ERROR][$SLURM_JOB_ID]: exiting prematurely because SLURM_JOB_ID is not defined: '${SLURM_JOB_ID}'"
-	exit 0
+  logger "EPILOG[ERROR][$SLURM_JOB_ID]: exiting prematurely because SLURM_JOB_ID is not defined: '${SLURM_JOB_ID}'"
+  exit 0
 fi
 
 # Don't try to kill user root or system daemon jobs
 if [ $SLURM_UID -lt 1000 ] ; then
-	logger "EPILOG[ERROR][$SLURM_JOB_ID]: exiting prematurely because SLURM_UID is below 1000: '${SLURM_UID}'"
-	exit 0
+  logger "EPILOG[ERROR][$SLURM_JOB_ID]: exiting prematurely because SLURM_UID is below 1000: '${SLURM_UID}'"
+  exit 0
 fi
 
-# TMPDIR_BASE is the base path used by private-tmpdir SPANK plugin to create
-# job private subdirectories. It needs to match the configured base= for this
-# plugin in plugstack.conf. Default value is '/tmp/slurm'.
-TMPDIR_BASE=/tmp/slurm
+# Find and list all user processes, tmp (outside of TMPDIR_BASE) and shm files
+# to destroy. These lists are computed at the beginning of this script to
+# minimize risks of conflicts with jobs starting while this script is runnning.
+user_procs=$(pgrep -u "$SLURM_UID")
+user_tmp_files=$(find /tmp -uid "$SLURM_UID")
 
+# CGROUP V1 (RHEL < 9 & Debian <= 9)
 # Look at cpuset cgroup controller sysfs to check if user has other running
 # jobs on this node. This technique is used to avoid sending RPC to slurmctld
 # (eg. with `squeue`) which could generate noticeable load on slurmctld when
@@ -39,14 +43,6 @@ TMPDIR_BASE=/tmp/slurm
 #
 # The first parameter is required to ensure the cgroup is created even without
 # real step (ex: with processes launched using SSH) at job allocation time.
-
-# Find and list all user processes, tmp (outside of TMPDIR_BASE) and shm files
-# to destroy. These lists are computed at the beginning of this script to
-# minimize risks of conflicts with jobs starting while this script is runnning.
-user_procs=$(pgrep -u "$SLURM_UID")
-user_shm_files=$(find /dev/shm -name 'psm_shm.*')
-user_tmp_files=$(find /tmp -uid "$SLURM_UID" ! -path "${TMPDIR_BASE}.*")
-
 # Some SLURM versions have the hostname, others don't, trying to detect
 # the actual one used is probably the more robust way
 if [[ -d "/sys/fs/cgroup/cpuset/slurm_$HOSTNAME" ]]
@@ -56,89 +52,92 @@ else
   cgroup_uid_dirname="slurm/uid_$SLURM_UID"
 fi
 cgroup_uid_dir="/sys/fs/cgroup/cpuset/${cgroup_uid_dirname}"
-job_list=$([ -d $cgroup_uid_dir ] && (cd $cgroup_uid_dir; ls -d job_* | awk '/job_[0-9][0-9]*/{sub(/^job_/,""); print}'))
+
+# Get the cgroup version
+if [[ -d "${cgroup_uid_dir}" ]]
+then
+  logger "EPILOG[INFO][$SLURM_JOB_ID]: Discovering joblist for ${SLURM_UID} with cgroupv1."
+  cgroup=v1
+  job_list=$([ -d $cgroup_uid_dir ] && (cd $cgroup_uid_dir; ls -d job_* | awk '/job_[0-9][0-9]*/{sub(/^job_/,""); print}'))
+else
+  logger "EPILOG[INFO][$SLURM_JOB_ID]: Discovering joblist for ${SLURM_UID} with squeue."
+  # cgroup v2, no way to have the job list without doing an RPC
+  cgroup=v2
+  job_list=$(squeue --state RUNNING -u ${SLURM_UID} -w ${HOSTNAME} -O jobid --noheader |sort |uniq)
+fi
 
 # Clean Job actual job cgroups and processes
 # this should correct job zombies bug and clean what
 # Slurm doesn't clean correctly (processes for non existant jobs in squeue and cgroups)
 
-# we find all processes for actual job and we kill them
-logger "EPILOG[INFO][$SLURM_JOB_ID]: killing processes of job $SLURM_JOB_ID" 
-find "$cgroup_uid_dir/job_$SLURM_JOB_ID" -name "tasks" -exec kill {} /dev/null \; 2> /dev/null
+if [[ "x${cgroup}" == "xv1" ]]
+then
+  # we find all processes for actual job and we kill them, in cgroupv2, trusting SLURM
+  # to do this reliably
+  logger "EPILOG[INFO][$SLURM_JOB_ID]: killing processes of job $SLURM_JOB_ID"
+  find "$cgroup_uid_dir/job_$SLURM_JOB_ID" -name "tasks" -exec kill {} /dev/null \; 2> /dev/null
+  # Then we delete cgroups
+  #
+  # /!\ Please note this is a work-around for a bug observed on old Linux kernel
+  #     (3.16 branch) that wrongly return EBUSY to slurm when it tried to rmdir
+  #     the cgroups. See for reference:
+  #
+  #       https://github.com/torvalds/linux/commit/91486f61f486662c27ef86dd910f875832e3a5de
+  #
+  #     Fairly recent Linux kernels >= 4.4 are fixed and this work-around will be
+  #     useless once these old kernels are resorbed.
+  logger "EPILOG[INFO][$SLURM_JOB_ID]: deleting cgroups of job $SLURM_JOB_ID"
 
-# Then we delete cgroups
-#
-# /!\ Please note this is a work-around for a bug observed on old Linux kernel
-#     (3.16 branch) that wrongly return EBUSY to slurm when it tried to rmdir
-#     the cgroups. See for reference:
-#
-#       https://github.com/torvalds/linux/commit/91486f61f486662c27ef86dd910f875832e3a5de
-#
-#     Fairly recent Linux kernels >= 4.4 are fixed and this work-around will be
-#     useless once these old kernels are resorbed.
-logger "EPILOG[INFO][$SLURM_JOB_ID]: deleting cgroups of job $SLURM_JOB_ID"
+  CONTROLLERS="cpuset freezer"
 
-CONTROLLERS="cpuset freezer"
-
-for CONTROLLER in $CONTROLLERS; do
-	CONTROLLER_JOB_DIR="/sys/fs/cgroup/$CONTROLLER/${cgroup_uid_dirname}/job_$SLURM_JOB_ID"
-	if [ ! -d "$CONTROLLER_JOB_DIR" ]; then
-		logger "EPILOG[INFO][$SLURM_JOB_ID]: cgroups files not found for $CONTROLLER_JOB_DIR"
-	else
-		logger "EPILOG[ERROR][$SLURM_JOB_ID]: cgroups files found for $CONTROLLER_JOB_DIR"
-		number_step_dirs=$(find $CONTROLLER_JOB_DIR -name "step_*" -type d | wc -l)
-		logger "EPILOG[ERROR][$SLURM_JOB_ID]: number of step_* directories is $number_step_dirs"
-		# find -delete processes in-depth first
-		find $CONTROLLER_JOB_DIR -type d -delete
-	fi
-done
-
-logger "EPILOG[INFO][$SLURM_JOB_ID]: Deleting tmp files for job $SLURM_JOB_ID"
-# Remove private-tmpdir SPANK plugin tmp directory, following guidelines from
-# plugin developpers:
-# https://github.com/hpc2n/spank-private-tmp/blob/master/README
-PRIVATE_TMPDIR="${TMPDIR_BASE}.${SLURM_JOB_ID}.${SLURM_RESTART_COUNT:=0}"
-if [ -d "${PRIVATE_TMPDIR}" ]; then
-   logger "EPILOG[INFO][$SLURM_JOB_ID]: Remove private tmp directory $PRIVATE_TMPDIR"
-   rm -rf "${PRIVATE_TMPDIR}"
-fi
+  for CONTROLLER in $CONTROLLERS; do
+    CONTROLLER_JOB_DIR="/sys/fs/cgroup/$CONTROLLER/${cgroup_uid_dirname}/job_$SLURM_JOB_ID"
+    if [ ! -d "$CONTROLLER_JOB_DIR" ]; then
+      logger "EPILOG[INFO][$SLURM_JOB_ID]: cgroups files not found for $CONTROLLER_JOB_DIR"
+    else
+      logger "EPILOG[ERROR][$SLURM_JOB_ID]: cgroups files found for $CONTROLLER_JOB_DIR"
+      number_step_dirs=$(find $CONTROLLER_JOB_DIR -name "step_*" -type d | wc -l)
+      logger "EPILOG[ERROR][$SLURM_JOB_ID]: number of step_* directories is $number_step_dirs"
+      # find -delete processes in-depth first
+      find $CONTROLLER_JOB_DIR -type d -delete
+    fi
+  done
+fi 
 
 for job_id in $job_list; do
-	if [ "$job_id" != "$SLURM_JOB_ID" ]; then
-		logger "EPILOG[INFO][$SLURM_JOB_ID]: another JOB $job_id is running for user $SLURM_UID ($SLURM_JOB_ID) on $HOSTNAME"
-		exit 0
-	fi
+  if [ "$job_id" != "$SLURM_JOB_ID" ]; then
+    logger "EPILOG[INFO][$SLURM_JOB_ID]: another JOB $job_id is running for user $SLURM_UID ($SLURM_JOB_ID) on $HOSTNAME"
+    exit 0
+  fi
 done
-
 # No other SLURM jobs, purge all remaining processes of this user
 logger "EPILOG[INFO][$SLURM_JOB_ID]: no other JOB were found for user $SLURM_UID ($SLURM_JOB_ID) on $HOSTNAME"
 
-# Ensure user cgroup is removed if user has no other running job on this node
-for CONTROLLER in $CONTROLLERS; do
-	rmdir /sys/fs/cgroup/$CONTROLLER/${cgroup_uid_dirname}
-done
+if [[ "x${cgroup}" == "xv1" ]]
+then
+  # Ensure user cgroup is removed if user has no other running job on this node
+  for CONTROLLER in $CONTROLLERS; do
+    rmdir /sys/fs/cgroup/$CONTROLLER/${cgroup_uid_dirname}
+  done
+fi
 
 for pid in $user_procs; 
 do 
-	kill -9 $pid;
-	logger "EPILOG[INFO][$SLURM_JOB_ID]: killed remaining running process ($pid) of user ${SLURM_UID} for JOB ${SLURM_JOB_ID} on ${HOSTNAME}" 
+  kill -9 $pid;
+  logger "EPILOG[INFO][$SLURM_JOB_ID]: killed remaining running process ($pid) of user ${SLURM_UID} for JOB ${SLURM_JOB_ID} on ${HOSTNAME}" 
 done 
 
-# clean shared memory files generated by QLogic PSM stack
-logger "EPILOG[INFO][$SLURM_JOB_ID]: Cleaning shared memory files generated by QLogic PSM stack for job $SLURM_JOB_ID"
-for shm_file in $user_shm_files
-do
-	rm -f $shm_file
-done
-
-# Remove user tmp files found outside of private-tmpdir SPANK plugin tmp directories.
-logger "EPILOG[INFO][$SLURM_JOB_ID]: Deleting additional tmp files for user $SLURM_UID"
+# Remove user tmp files, if a rogue process managed to create files since the beginning of the
+# script, we can't do anything because it would be impossible to differentiate that from a new
+# job that just started.
+logger "EPILOG[INFO][$SLURM_JOB_ID]: Deleting tmp files for user $SLURM_UID"
 IFS=$'\n'
 for tmp_file in $user_tmp_files
 do
-	logger "EPILOG[INFO][$SLURM_JOB_ID]: Remove user additional tmp file $tmp_file"
-	rm -rf $tmp_file
+  logger "EPILOG[INFO][$SLURM_JOB_ID]: Remove user tmp file $tmp_file"
+  rm -rf $tmp_file
 done
+
 IFS=''
 # Exit cleanly when finishing
 exit 0

@@ -25,30 +25,30 @@ if [[ -z "$KRB5CCNAME" ]]
 then
   # That's not good, we can't do much, if there is already a valid
   # credential cache in the canonical path that might work.
-  echo "No KRB5CCNAME defined" | logger -s
-  klist >&2
+  echo "No KRB5CCNAME defined" | logger
+  klist | logger
 else
   if [[ $KRB5CCNAME != "FILE:${canonical_ccache}" ]]
   then
     # Putting the cache in the canoncial place, cp is a crude tool
     # to do this, delegating a credential would be better
-    cp $(echo $KRB5CCNAME | cut -d ":" -f 2) ${canonical_ccache}
+    cp $(echo $KRB5CCNAME | cut -d ":" -f 2) ${canonical_ccache} 2>&1 | logger
   fi
 fi
 
 # Launch a background renewer for this canonical cache using auks
 #   Permits to talk to the systemctl user instance
 export XDG_RUNTIME_DIR="/run/user/${user_numerical_id}"
-if ! systemctl --user is-active auks-renewer
+if ! systemctl --user is-active auks-renewer > /dev/null 2>&1
 then
-  systemd-run --user --unit=auks-renewer auks -R loop -C "${canonical_ccache}"
+  systemd-run --user --unit=auks-renewer auks -R loop -C "${canonical_ccache}" 2>&1 | logger
 else
-  echo "auks-renewer unit is already running" |logger -s
+  echo "auks-renewer unit is already running" | logger
 fi
 
 # Put some context in the logs
 klist |logger
-klist -C "${canonical_ccache}" |logger
+klist -C "${canonical_ccache}" | logger
 
 # And now the confusing part
 

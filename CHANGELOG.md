@@ -5,11 +5,26 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+## [2.1.0] - 2025-08-22
+
+### Fixed
+- Version bump to resync the version with the el9 packaging
+
+## [1.3.0] - 2025-08-22
+
+### Added
+- epilog/clean: Compatibility with cgroupv2 on EL9
+
+## [1.2.18] - 2025-01-10
+### Fixed
+- epilog: Set XDG_RUNTIME_DIR and more errors to dev/null
+
 ## [1.2.17] - 2024-05-31
 ### Fixed
 - slurmdbd-backup:
   - Fix conflict between "--single-transaction" and "-l" option
   - Remove "-l" in mysqldump_parameters by default and add a condition to use it
+
 ## [1.2.16] - 2023-09-21
 ### Fixed
 - job_submit.lua: Fixed a typo where username wasn't spelled properly (it's user_name)

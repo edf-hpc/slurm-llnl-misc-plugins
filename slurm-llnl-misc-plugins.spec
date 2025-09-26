@@ -1,12 +1,12 @@
 # Configuration Logic
 %define name slurm-llnl-misc-plugins
-%define version 2.1.0
+%define version 2.2.0
 %define debug_package %{nil}
 
 # Main preamble
 Summary: Miscelaneous plugins for Slurm open source scheduler
 Name: slurm-llnl-misc-plugins
-Version: 2.1.0
+Version: 2.2.0
 Release: 1%{?dist}.edf
 Source0: %{name}-%{version}.tar.gz
 License: GPLv3
@@ -222,6 +222,9 @@ The database is dumped in a local directory with the mysqldump tool.
 %config(noreplace) /etc/slurm/slurmdbd-backup.vars
 
 %changelog
+* Fri Sep 26 2025 Farid CHABANE <farid-externe.chabane@edf.fr> 2.2.0-1el9.edf
+- New upstream release 2.2.0
+
 * Fri Aug 22 2025 Thomas Hamel <thomas-t.hamel@edf.fr> 2.1.0-1el9.edf
 - New upstream release 2.1.0
 

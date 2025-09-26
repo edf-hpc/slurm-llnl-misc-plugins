@@ -148,6 +148,53 @@ end
 
 --========================================================================--
 
+function get_gpu_partition_name(config_file)
+    -- Read a configuration file and extract the GPU_PARTITION name
+    local partition_name
+    local file = io.open(config_file, "r")
+    if file then
+        for line in file:lines() do
+            -- Match the line that contains "PartitionName=XXX" and extract the value
+            local name = line:match("^GPU_PARTITION%s*=%s*(%S+)")
+            if name then
+                partition_name = name
+                break  -- Stop reading as soon as we find a match
+            end
+        end
+        file:close()
+    else
+        slurm.log_info("Unable to open the configuration file: " .. config_file)
+    end
+    return partition_name
+end
+
+--========================================================================--
+
+function get_gpu_count(str)
+   -- Get GPU count from a given string
+   -- str: "gres/gpu:N" or "gres/gpu:model:N"
+
+   -- Remove the "gres/" prefix if present
+   local value = str:gsub("^gres/", "")
+
+   -- Try to match the "gpu:N" format
+   local count = string.match(value, "^gpu:(%d+)$")
+
+   -- If not matched, try to match the "gpu:model:N" format
+   if not count then
+      _, count = string.match(value, "^gpu:(%w+):(%d+)$")
+   end
+
+   -- Validate that count is a positive integer
+   if count and tonumber(count) and tonumber(count) > 0 then
+      return tonumber(count)
+   end
+
+   return nil
+end
+
+--========================================================================--
+
 function build_qos_list()
    -- Read QOS configuration from sacctmgr command and create a multi-dimension table
    -- qos_list[qos_partition][qos_maxcpus][qos_duration][qos_name] = [account_1, ..., account_n]
@@ -305,6 +352,7 @@ JOB_NAME_MAXLEN = 40
 -- cf. slurm/slurm_errno.h
 ESLURM_INVALID_WCKEY = 2057
 ESLURM_INVALID_QOS = 2066
+ESLURM_INVALID_GRES = 2072
 
 WCKEY_CONF_FILE = CONF_DIR .. "/wckeysctl/wckeys"
 WCKEY_USER_EXCEPTION_FILE = CONF_DIR .. "/wckeysctl/wckeys_user_exception"
@@ -503,6 +551,28 @@ function slurm_job_submit(job_desc, part_list, submit_uid)
            job_desc.name, job_desc.user_name, job_desc.time_limit, job_desc.partition)
         return ESLURM_INVALID_QOS
      end
+   end
+
+   -- Check gres/gpu parameters
+   -- Ensure that when AN partition is used, the gres/gpu parameters should be defined
+   local gpu_partition = get_gpu_partition_name(conf_file)
+   if job_desc.partition == gpu_partition then
+       local count = nil
+       -- Check for --gres=gpu:N or --gres=gpu:model:N requests.
+       if job_desc.gres and string.find(job_desc.gres, "gpu") then
+           count = get_gpu_count(job_desc.gres)
+       -- Check for --gpus=N requests (tres_per_job can be used for this purpose)
+       elseif job_desc.tres_per_job then
+           count = get_gpu_count(job_desc.tres_per_job)
+       else
+           log_error("slurm_job_submit: error: job %s submitted by %s didn't request GRES/GPUs which is mandatory on %s partition", job_desc.name, job_desc.user_name, job_desc.partition)
+           return ESLURM_INVALID_GRES
+       end
+
+       if not count then
+           log_error("slurm_job_submit: error: job %s submitted by %s has an invalid GRES format or GPU count", job_desc.name, job_desc.user_name)
+           return ESLURM_INVALID_GRES
+       end
    end
 
    -- check time limit
